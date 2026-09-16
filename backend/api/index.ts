@@ -13,6 +13,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev-only';
 
 app.use(cors({ origin: '*' })); // Update to specific origin in production
 app.use(express.json());
+app.get('/api/debug', (req: Request, res: Response) => {
+  res.json({
+    env: process.env.NODE_ENV,
+    hasDbUrl: !!process.env.DATABASE_URL,
+    hasJwt: !!process.env.JWT_SECRET,
+    dir: __dirname,
+    cwd: process.cwd(),
+    prismaClient: typeof PrismaClient
+  });
+});
 
 declare global {
   namespace Express {
@@ -25,7 +35,7 @@ declare global {
 const requireRole = (roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user || !roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'Ù…Ù…Ù†ÙˆØ¹ Ø§Ù„Ø¯Ø®ÙˆÙ„' });
+      res.status(403).json({ error: 'Ã™â€¦Ã™â€¦Ã™â€ Ã™Ë†Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž' });
       return;
     }
     next();
