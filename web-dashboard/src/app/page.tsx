@@ -1,199 +1,367 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getPitches, getPitch } from '@/lib/api';
-import { Calendar, Clock, DollarSign, Users, ChevronLeft, X, MapPin } from 'lucide-react';
+import {
+  getAdminStats,
+  getPitches,
+  getAdminBookings,
+  getUsers,
+  deletePitch,
+  deleteUser,
+} from '@/lib/api';
+import {
+  ShieldCheck,
+  DollarSign,
+  Users,
+  Calendar,
+  Trash2,
+  MapPin,
+  CheckCircle,
+  TrendingUp,
+  Award,
+} from 'lucide-react';
 
-interface Pitch {
-  id: string;
-  name: string;
-  description: string;
-  location: string;
-  surface: string;
-  indoor: boolean;
-  amenities: string[];
-  pricePerHour: number;
-  images: string[];
-  bookings?: any[];
-}
+export default function MasterAdminDashboard() {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pitches' | 'users' | 'bookings'>('overview');
+  const [stats, setStats] = useState<any>(null);
+  const [pitches, setPitches] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-function StatCard({ icon: Icon, iconBg, iconColor, label, value }: any) {
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-      <div className={`p-3 ${iconBg} rounded-full`}>
-        <Icon className={`w-6 h-6 ${iconColor}`} />
-      </div>
-      <div>
-        <p className="text-sm text-gray-500 font-medium">{label}</p>
-        <p className="text-2xl font-bold">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function SlotTimeline({ pitch }: { pitch: Pitch }) {
-  const hours = Array.from({ length: 12 }, (_, i) => i + 10); // 10:00 to 21:00
-  const bookings = pitch.bookings || [];
-
-  const isBooked = (hour: number) => {
-    return bookings.some((b: any) => {
-      const start = new Date(b.startTime);
-      return start.getHours() === hour;
-    });
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [statsData, pitchesData, usersData, bookingsData] = await Promise.all([
+        getAdminStats(),
+        getPitches(),
+        getUsers(),
+        getAdminBookings(),
+      ]);
+      setStats(statsData);
+      setPitches(pitchesData);
+      setUsers(usersData);
+      setBookings(bookingsData);
+    } catch (err) {
+      console.error('Failed to load admin data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="mt-4">
-      <h4 className="text-sm font-bold text-gray-700 mb-2">المواعيد اليوم:</h4>
-      <div className="flex flex-wrap gap-2">
-        {hours.map((h) => {
-          const booked = isBooked(h);
-          return (
-            <div
-              key={h}
-              className={`px-3 py-2 rounded-lg text-sm font-mono font-bold border ${
-                booked
-                  ? 'bg-red-50 border-red-300 text-red-600 line-through'
-                  : 'bg-green-50 border-green-300 text-green-700 cursor-pointer hover:bg-green-100'
-              }`}
-            >
-              {h}:00
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex gap-4 mt-2 text-xs text-gray-500">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-200 rounded inline-block"></span>متاح</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-200 rounded inline-block"></span>محجوز</span>
-      </div>
-    </div>
-  );
-}
-
-export default function Dashboard() {
-  const [pitches, setPitches] = useState<Pitch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-
   useEffect(() => {
-    getPitches()
-      .then((data) => {
-        setPitches(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('فشل تحميل البيانات. تأكد أن السيرفر يعمل على المنفذ 3001.');
-        setLoading(false);
-      });
+    loadData();
   }, []);
 
-  const openPitchDetail = async (id: string) => {
-    setDetailLoading(true);
+  const handleDeletePitch = async (id: string, name: string) => {
+    if (!confirm(`هل أنت متأكد من حذف ملعب "${name}" نهائياً من المنصة؟`)) return;
     try {
-      const data = await getPitch(id);
-      setSelectedPitch(data);
+      await deletePitch(id);
+      setPitches(pitches.filter(p => p.id !== id));
+      alert('تم حذف الملعب بنجاح!');
     } catch {
-      setError('فشل تحميل تفاصيل الملعب');
-    } finally {
-      setDetailLoading(false);
+      alert('فشل حذف الملعب');
+    }
+  };
+
+  const handleDeleteUser = async (id: string, name: string) => {
+    if (!confirm(`هل أنت متأكد من حذف/حظر المستخدم "${name}"؟`)) return;
+    try {
+      await deleteUser(id);
+      setUsers(users.filter(u => u.id !== id));
+      alert('تم حذف المستخدم بنجاح!');
+    } catch {
+      alert('فشل حذف المستخدم');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <h1 className="text-2xl font-bold text-green-600">⚽ PitchUp لوحة التحكم</h1>
-            <span className="text-sm text-gray-500">مرحباً، مالك الملعب</span>
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans" dir="rtl">
+      {/* Top Super Admin Nav */}
+      <header className="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400 border border-emerald-500/30">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-white flex items-center gap-2">
+                PitchUp <span className="bg-emerald-500 text-slate-950 text-xs px-2 py-0.5 rounded-full font-black">SUPER ADMIN</span>
+              </h1>
+              <p className="text-xs text-slate-400">لوحة الإدارة العليا والتحكم المركزي للمدينة</p>
+            </div>
           </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-xs bg-slate-700/60 px-3 py-1.5 rounded-lg text-emerald-400 font-mono border border-slate-600 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              السيرفر متصل أونلاين
+            </span>
+            <button
+              onClick={loadData}
+              className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-200 transition"
+            >
+              تحديث البيانات
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-8 border-t border-slate-700/50 text-sm font-medium">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`py-3 border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'overview' ? 'border-emerald-400 text-emerald-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" /> نظرة عامة والأرباح
+          </button>
+          <button
+            onClick={() => setActiveTab('pitches')}
+            className={`py-3 border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'pitches' ? 'border-emerald-400 text-emerald-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Award className="w-4 h-4" /> كل الملاعب ({pitches.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`py-3 border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'users' ? 'border-emerald-400 text-emerald-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Users className="w-4 h-4" /> اللاعبين والشركاء ({users.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('bookings')}
+            className={`py-3 border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'bookings' ? 'border-emerald-400 text-emerald-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Calendar className="w-4 h-4" /> سجل الحجوزات المباشر ({bookings.length})
+          </button>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <StatCard icon={DollarSign} iconBg="bg-green-100" iconColor="text-green-600" label="أرباح اليوم" value="1,200 ج.م" />
-          <StatCard icon={Calendar} iconBg="bg-blue-100" iconColor="text-blue-600" label="حجوزات اليوم" value="8 حجوزات" />
-          <StatCard icon={Clock} iconBg="bg-orange-100" iconColor="text-orange-600" label="الساعات المتاحة" value="4 ساعات" />
-          <StatCard icon={Users} iconBg="bg-purple-100" iconColor="text-purple-600" label="طلبات إيجاد لاعب" value="2 طلبات" />
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-
-        {/* Pitch Detail Modal */}
-        {selectedPitch && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="relative">
-                <img src={selectedPitch.images[0]} alt={selectedPitch.name} className="w-full h-56 object-cover rounded-t-2xl" />
-                <button
-                  onClick={() => setSelectedPitch(null)}
-                  className="absolute top-3 left-3 bg-white/80 rounded-full p-1.5 hover:bg-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-6">
-                <h2 className="text-2xl font-bold mb-2">{selectedPitch.name}</h2>
-                <p className="text-gray-500 flex items-center gap-1 mb-3"><MapPin className="w-4 h-4" />{selectedPitch.location}</p>
-                <p className="text-gray-700 mb-4">{selectedPitch.description}</p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {selectedPitch.amenities.map((a, i) => (
-                    <span key={i} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">{a}</span>
-                  ))}
-                </div>
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full">{selectedPitch.surface} • {selectedPitch.indoor ? 'داخلي' : 'خارجي'}</span>
-                  <span className="text-lg font-bold text-green-600">{selectedPitch.pricePerHour} ج.م / ساعة</span>
-                </div>
-                <SlotTimeline pitch={selectedPitch} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Pitch List */}
-        <h2 className="text-xl font-bold mb-4">ملاعبي</h2>
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
+          <div className="flex justify-center items-center py-32">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pitches.map((pitch) => (
-              <div key={pitch.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition">
-                <img
-                  src={pitch.images?.[0] || ''}
-                  alt={pitch.name}
-                  className="w-full h-48 object-cover"
-                  onError={(e: any) => { e.target.src = 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image'; }}
-                />
-                <div className="p-4">
-                  <h3 className="text-lg font-bold mb-1">{pitch.name}</h3>
-                  <p className="text-sm text-gray-500 flex items-center gap-1 mb-3"><MapPin className="w-3 h-3" />{pitch.location}</p>
-                  <div className="flex justify-between items-center text-sm mb-3">
-                    <span className="bg-gray-100 px-2 py-1 rounded">{pitch.surface}</span>
-                    <span className="font-bold text-green-600">{pitch.pricePerHour} ج.م / ساعة</span>
+          <>
+            {/* 1. OVERVIEW TAB */}
+            {activeTab === 'overview' && (
+              <div className="space-y-8">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  <div className="bg-slate-800/90 border border-slate-700/80 p-5 rounded-2xl">
+                    <div className="flex items-center justify-between text-slate-400 text-sm mb-3">
+                      <span>إجمالي عمولة المنصة (10%)</span>
+                      <DollarSign className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <p className="text-3xl font-black text-emerald-400">
+                      {(stats?.platformCommission || 0).toLocaleString()} ج.م
+                    </p>
+                    <p className="text-xs text-slate-400 mt-2">من إجمالي حركات حجز بقيمة {(stats?.totalRevenue || 0).toLocaleString()} ج.م</p>
                   </div>
-                  <button
-                    onClick={() => openPitchDetail(pitch.id)}
-                    className="w-full bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
-                  >
-                    إدارة المواعيد <ChevronLeft className="w-4 h-4" />
-                  </button>
+
+                  <div className="bg-slate-800/90 border border-slate-700/80 p-5 rounded-2xl">
+                    <div className="flex items-center justify-between text-slate-400 text-sm mb-3">
+                      <span>إجمالي الحجوزات</span>
+                      <Calendar className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <p className="text-3xl font-black text-white">{stats?.totalBookings || 0}</p>
+                    <p className="text-xs text-slate-400 mt-2">حجز مؤكد في ملاعب المدينة</p>
+                  </div>
+
+                  <div className="bg-slate-800/90 border border-slate-700/80 p-5 rounded-2xl">
+                    <div className="flex items-center justify-between text-slate-400 text-sm mb-3">
+                      <span>ملاعب المدينة المعتمدة</span>
+                      <Award className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <p className="text-3xl font-black text-white">{stats?.totalPitches || 0}</p>
+                    <p className="text-xs text-slate-400 mt-2">كرة قدم، بادل، بلياردو، جيم</p>
+                  </div>
+
+                  <div className="bg-slate-800/90 border border-slate-700/80 p-5 rounded-2xl">
+                    <div className="flex items-center justify-between text-slate-400 text-sm mb-3">
+                      <span>المستخدمين المسجلين</span>
+                      <Users className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <p className="text-3xl font-black text-white">{stats?.totalUsers || 0}</p>
+                    <p className="text-xs text-slate-400 mt-2">
+                      {stats?.totalPlayers || 0} لاعب • {stats?.totalOwners || 0} صاحب منشأة
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Activity Box */}
+                <div className="bg-slate-800/90 border border-slate-700 p-6 rounded-2xl">
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-emerald-400" /> أحدث الحجوزات المباشرة في مدينتك
+                  </h3>
+                  <div className="divide-y divide-slate-700/50">
+                    {bookings.slice(0, 5).map((b) => (
+                      <div key={b.id} className="py-3 flex items-center justify-between text-sm">
+                        <div>
+                          <p className="font-bold text-slate-200">{b.user?.name} (هاتف: {b.user?.phone})</p>
+                          <p className="text-xs text-slate-400">{b.pitch?.name} • {b.pitch?.location}</p>
+                        </div>
+                        <div className="text-left">
+                          <span className="text-emerald-400 font-bold font-mono">{b.pitch?.pricePerHour} ج.م</span>
+                          <p className="text-xs text-slate-400">
+                            {new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+
+            {/* 2. PITCHES TAB */}
+            {activeTab === 'pitches' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="text-xl font-bold text-white">كل الملاعب المضافة على التطبيق</h2>
+                  <span className="text-xs text-slate-400">تحكم كامل بحذف أو مراجعة أي ملعب</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pitches.map((p) => (
+                    <div key={p.id} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden group hover:border-slate-600 transition">
+                      <img src={p.images?.[0] || ''} alt={p.name} className="w-full h-44 object-cover" />
+                      <div className="p-5">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-lg font-bold text-white">{p.name}</h3>
+                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-xs font-bold">
+                            {p.pricePerHour} ج.م / ساعة
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 flex items-center gap-1 mb-3">
+                          <MapPin className="w-3.5 h-3.5" /> {p.location}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          <span className="bg-slate-700 px-2 py-0.5 rounded text-xs text-slate-300">{p.surface}</span>
+                          {p.indoor && <span className="bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded text-xs">صالة مغطاة</span>}
+                        </div>
+                        <button
+                          onClick={() => handleDeletePitch(p.id, p.name)}
+                          className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" /> حذف الملعب نهائياً
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. USERS TAB */}
+            {activeTab === 'users' && (
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-slate-700 flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-white">قائمة جميع المسجلين في مدينتك</h2>
+                  <span className="text-xs text-slate-400">إجمالي {users.length} مستخدم</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-sm">
+                    <thead className="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700">
+                      <tr>
+                        <th className="py-3.5 px-6">الاسم</th>
+                        <th className="py-3.5 px-6">رقم الهاتف</th>
+                        <th className="py-3.5 px-6">نوع الحساب</th>
+                        <th className="py-3.5 px-6">تاريخ الانضمام</th>
+                        <th className="py-3.5 px-6 text-center">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-750 transition">
+                          <td className="py-4 px-6 font-medium text-white">{u.name}</td>
+                          <td className="py-4 px-6 font-mono text-slate-300">{u.phone}</td>
+                          <td className="py-4 px-6">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                              u.role === 'OWNER' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            }`}>
+                              {u.role === 'OWNER' ? 'صاحب ملعب' : 'لاعب'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-xs text-slate-400">
+                            {new Date(u.createdAt).toLocaleDateString('ar-EG')}
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <button
+                              onClick={() => handleDeleteUser(u.id, u.name)}
+                              className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition"
+                              title="حذف المستخدم"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 4. BOOKINGS TAB */}
+            {activeTab === 'bookings' && (
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-slate-700">
+                  <h2 className="text-lg font-bold text-white">سجل جميع الحجوزات</h2>
+                  <p className="text-xs text-slate-400">متابعة لحظية لكل حجز تم في الملاعب</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-sm">
+                    <thead className="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700">
+                      <tr>
+                        <th className="py-3.5 px-6">اللاعب</th>
+                        <th className="py-3.5 px-6">الملعب</th>
+                        <th className="py-3.5 px-6">توقيت الحجز</th>
+                        <th className="py-3.5 px-6">قيمة الحجز</th>
+                        <th className="py-3.5 px-6">عمولة المنصة</th>
+                        <th className="py-3.5 px-6">الحالة</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                      {bookings.map((b) => (
+                        <tr key={b.id} className="hover:bg-slate-750 transition">
+                          <td className="py-4 px-6">
+                            <p className="font-bold text-white">{b.user?.name}</p>
+                            <p className="text-xs text-slate-400">{b.user?.phone}</p>
+                          </td>
+                          <td className="py-4 px-6">
+                            <p className="font-medium text-slate-200">{b.pitch?.name}</p>
+                            <p className="text-xs text-slate-400">{b.pitch?.location}</p>
+                          </td>
+                          <td className="py-4 px-6 text-xs text-slate-300">
+                            {new Date(b.startTime).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
+                          </td>
+                          <td className="py-4 px-6 font-mono font-bold text-white">
+                            {b.pitch?.pricePerHour} ج.م
+                          </td>
+                          <td className="py-4 px-6 font-mono font-bold text-emerald-400">
+                            {Math.round((b.pitch?.pricePerHour || 0) * 0.10)} ج.م
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-xs font-bold">
+                              {b.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

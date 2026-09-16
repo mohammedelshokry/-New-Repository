@@ -320,11 +320,93 @@ app.get('/api/users', async (_req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: { id: true, name: true, phone: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
     });
     res.json(users);
   } catch (error) {
     console.error('GET /api/users error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Super Admin Master Control Endpoints ──────────────────
+
+// Admin Dashboard Summary Stats
+app.get('/api/admin/stats', async (_req, res) => {
+  try {
+    const [totalUsers, totalPlayers, totalOwners, totalPitches, totalBookings] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { role: 'PLAYER' } }),
+      prisma.user.count({ where: { role: 'OWNER' } }),
+      prisma.pitch.count(),
+      prisma.booking.count(),
+    ]);
+
+    // Calculate approximate platform volume and 10% commission
+    const bookings = await prisma.booking.findMany({
+      include: { pitch: { select: { pricePerHour: true } } },
+    });
+
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.pitch?.pricePerHour || 0), 0);
+    const platformCommission = Math.round(totalRevenue * 0.10); // 10% commission
+
+    res.json({
+      totalUsers,
+      totalPlayers,
+      totalOwners,
+      totalPitches,
+      totalBookings,
+      totalRevenue,
+      platformCommission,
+    });
+  } catch (error) {
+    console.error('GET /api/admin/stats error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin All Bookings with full details
+app.get('/api/admin/bookings', async (_req, res) => {
+  try {
+    const bookings = await prisma.booking.findMany({
+      include: {
+        user: { select: { name: true, phone: true } },
+        pitch: { select: { name: true, location: true, pricePerHour: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json(bookings);
+  } catch (error) {
+    console.error('GET /api/admin/bookings error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin Delete Pitch
+app.delete('/api/admin/pitches/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.booking.deleteMany({ where: { pitchId: id } });
+    await prisma.pitch.delete({ where: { id } });
+    res.json({ success: true, message: 'تم حذف الملعب بنجاح' });
+  } catch (error) {
+    console.error('DELETE /api/admin/pitches/:id error:', error);
+    res.status(500).json({ error: 'Failed to delete pitch' });
+  }
+});
+
+// Admin Delete User
+app.delete('/api/admin/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.booking.deleteMany({ where: { userId: id } });
+    await prisma.matchRequest.deleteMany({ where: { creatorId: id } });
+    await prisma.user.delete({ where: { id } });
+    res.json({ success: true, message: 'تم حذف المستخدم بنجاح' });
+  } catch (error) {
+    console.error('DELETE /api/admin/users/:id error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
