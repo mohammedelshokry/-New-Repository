@@ -33,10 +33,16 @@ jobs:
       - name: Build Release APK
         run: |
           cd mobile-app
-          flutter build apk --release
+          flutter build apk --release > build_log.txt 2>&1 || true
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: PitchUp-Release-APK
           path: mobile-app/build/app/outputs/flutter-apk/app-release.apk
+      - name: Upload Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Logs
+          path: mobile-app/build_log.txt
