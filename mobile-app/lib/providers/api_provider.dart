@@ -1,20 +1,19 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Change this IP to your computer's local Wi-Fi IP (e.g. http://192.168.1.5:3001/api)
-// or use your deployed domain / ngrok URL when sending the APK to other people!
-final apiBaseUrlProvider = StateProvider<String>((ref) => 'http://10.0.2.2:3001/api');
+// The centralized backend API URL (completely invisible to players and pitch owners, just like Uber)
+// When deploying to Render/Railway, simply paste your live cloud URL here (e.g. 'https://pitchup-backend.onrender.com/api')
+const String kProductionApiUrl = 'http://10.0.2.2:3001/api';
 
 final dioProvider = Provider<Dio>((ref) {
-  final baseUrl = ref.watch(apiBaseUrlProvider);
   return Dio(BaseOptions(
-    baseUrl: baseUrl,
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
+    baseUrl: kProductionApiUrl,
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(seconds: 15),
   ));
 });
 
-// Currently logged in user (null if not logged in)
+// Current logged in user (null = show AuthScreen)
 final currentUserProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
 
 final pitchesProvider = FutureProvider<List<dynamic>>((ref) async {

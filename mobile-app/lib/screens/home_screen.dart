@@ -13,54 +13,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
-  void _showServerSettings() {
-    final currentUrl = ref.read(apiBaseUrlProvider);
-    final ctrl = TextEditingController(text: currentUrl);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('إعدادات الاتصال بالسيرفر'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'إذا بتجرب التطبيق من موبايل حقيقي، اكتب عنوان الـ IP لجهاز الكمبيوتر (مثال: http://192.168.1.15:3001/api) أو رابط السيرفر السحابي:',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Server Base URL',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(apiBaseUrlProvider.notifier).state = ctrl.text.trim();
-              ref.invalidate(pitchesProvider);
-              ref.invalidate(matchRequestsProvider);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('تم تحديث رابط السيرفر بنجاح!')),
-              );
-            },
-            child: const Text('حفظ'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -80,11 +32,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: Colors.white,
         elevation: 0.5,
         actions: [
-          IconButton(
-            tooltip: 'إعدادات السيرفر والاتصال',
-            icon: const Icon(Icons.settings_ethernet, color: Colors.grey),
-            onPressed: _showServerSettings,
-          ),
           IconButton(
             tooltip: 'تسجيل خروج',
             icon: const Icon(Icons.logout, color: Colors.redAccent),
