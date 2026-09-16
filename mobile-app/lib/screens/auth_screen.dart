@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,11 +26,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final name = nameController.text.trim();
 
     if (phone.isEmpty || password.isEmpty) {
-      setState(() => errorMsg = 'الرجاء إدخال رقم الهاتف وكلمة المرور');
+      setState(() => errorMsg = '?????? ????? ??? ?????? ????? ??????');
       return;
     }
     if (!isLogin && name.isEmpty) {
-      setState(() => errorMsg = 'الرجاء إدخال الاسم');
+      setState(() => errorMsg = '?????? ????? ?????');
       return;
     }
 
@@ -69,10 +69,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
     } on DioException catch (e) {
       setState(() {
-        errorMsg = e.response?.data?['error']?.toString() ?? 'خطأ في الاتصال';
+        errorMsg = e.response?.data?['error']?.toString() ?? '??? ?? ???????';
       });
     } catch (e) {
-      setState(() => errorMsg = 'خطأ غير متوقع');
+      setState(() => errorMsg = '??? ??? ?????');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -86,7 +86,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           padding: const EdgeInsets.all(40),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            stretch: true,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
                 child: Column(
@@ -119,7 +119,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             color: isLogin ? Colors.green : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Center(child: Text('تسجيل دخول', style: TextStyle(color: isLogin ? Colors.white : Colors.grey.shade700, fontWeight: FontWeight.bold))),
+                          child: Center(child: Text('????? ????', style: TextStyle(color: isLogin ? Colors.white : Colors.grey.shade700, fontWeight: FontWeight.bold))),
                         ),
                       ),
                     ),
@@ -132,7 +132,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             color: !isLogin ? Colors.green : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Center(child: Text('حساب جديد', style: TextStyle(color: !isLogin ? Colors.white : Colors.grey.shade700, fontWeight: FontWeight.bold))),
+                          child: Center(child: Text('???? ????', style: TextStyle(color: !isLogin ? Colors.white : Colors.grey.shade700, fontWeight: FontWeight.bold))),
                         ),
                       ),
                     ),
@@ -145,7 +145,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
-                    labelText: 'الاسم',
+                    labelText: '?????',
                     prefixIcon: const Icon(Icons.person),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -157,7 +157,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
-                  labelText: 'رقم الهاتف',
+                  labelText: '??? ??????',
                   prefixIcon: const Icon(Icons.phone),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -168,7 +168,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  labelText: 'كلمة السر',
+                  labelText: '???? ????',
                   prefixIcon: const Icon(Icons.lock),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -192,7 +192,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
                 child: isLoading
                     ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : Text(isLogin ? 'تسجيل دخول' : 'إنشاء حساب', style: const TextStyle(fontSize: 18, color: Colors.white)),
+                    : Text(isLogin ? '????? ????' : '????? ????', style: const TextStyle(fontSize: 18, color: Colors.white)),
               ),
             ],
           ),
