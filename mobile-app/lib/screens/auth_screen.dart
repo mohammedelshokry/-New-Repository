@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/api_provider.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -15,71 +16,78 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String selectedRole = 'PLAYER';
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
   bool isLoading = false;
   String? errorMsg;
 
   void submit() async {
     final phone = phoneController.text.trim();
+    final password = passwordController.text.trim();
     final name = nameController.text.trim();
 
-    if (phone.isEmpty) {
-      setState(() => errorMsg = 'من فضلك أدخل رقم الهاتف');
+    if (phone.isEmpty || password.isEmpty) {
+      setState(() => errorMsg = 'الرجاء إدخال رقم الهاتف وكلمة المرور');
       return;
     }
     if (!isLogin && name.isEmpty) {
-      setState(() => errorMsg = 'من فضلك أدخل الاسم');
+      setState(() => errorMsg = 'الرجاء إدخال الاسم');
       return;
     }
 
     setState(() { isLoading = true; errorMsg = null; });
-
     final dio = ref.read(dioProvider);
 
     try {
       if (isLogin) {
-        // Login: find user by phone
-        final res = await dio.get('/users');
-        final users = res.data as List;
-        final user = users.firstWhere(
-          (u) => u['phone'] == phone,
-          orElse: () => null,
-        );
-        if (user == null) {
-          setState(() { errorMsg = 'رقم الهاتف غير مسجل. قم بإنشاء حساب جديد.'; isLoading = false; });
-          return;
-        }
+        final res = await dio.post('/auth/login', data: {
+          'phone': phone,
+          'password': password,
+        });
+        final token = res.data['token'];
+        final user = res.data['user'];
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', token);
         ref.read(currentUserProvider.notifier).state = user;
       } else {
-        // Register
-        final res = await dio.post('/users/register', data: {
+        final res = await dio.post('/auth/register', data: {
           'name': name,
           'phone': phone,
-          'role': selectedRole,
+          'password': password,
         });
-        ref.read(currentUserProvider.notifier).state = res.data;
+        if (res.statusCode == 201) {
+          final loginRes = await dio.post('/auth/login', data: {
+            'phone': phone,
+            'password': password,
+          });
+          final token = loginRes.data['token'];
+          final user = loginRes.data['user'];
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('jwt_token', token);
+          ref.read(currentUserProvider.notifier).state = user;
+        }
       }
     } on DioException catch (e) {
       setState(() {
-        errorMsg = e.response?.data?['error'] ?? 'حدث خطأ في الاتصال بالسيرفر';
+        errorMsg = e.response?.data?['error']?.toString() ?? 'خطأ في الاتصال';
       });
     } catch (e) {
-      setState(() { errorMsg = 'حدث خطأ غير متوقع'; });
+      setState(() => errorMsg = 'خطأ غير متوقع');
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
+      body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+          padding: const EdgeInsets.all(40),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.center,
+            stretch: true,
             children: [
-              const SizedBox(height: 30),
-              // Logo
               Center(
                 child: Column(
                   children: [
@@ -93,14 +101,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text('PitchUp', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
-                    const SizedBox(height: 4),
-                    const Text('احجز ملعبك. العب مباراتك.', style: TextStyle(color: Colors.grey, fontSize: 14)),
                   ],
                 ),
               ),
               const SizedBox(height: 40),
 
-              // Toggle Login / Register
               Container(
                 decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
                 child: Row(
@@ -136,7 +141,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Name field (register only)
               if (!isLogin) ...[
                 TextField(
                   controller: nameController,
@@ -149,7 +153,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Phone field
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -161,61 +164,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Role selector (register only)
-              if (!isLogin) ...[
-                const Text('أنت إيه؟', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => selectedRole = 'PLAYER'),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedRole == 'PLAYER' ? Colors.green.shade50 : Colors.grey.shade50,
-                            border: Border.all(color: selectedRole == 'PLAYER' ? Colors.green : Colors.grey.shade300, width: 2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.sports_soccer, size: 36, color: selectedRole == 'PLAYER' ? Colors.green : Colors.grey),
-                              const SizedBox(height: 8),
-                              Text('لاعب', style: TextStyle(fontWeight: FontWeight.bold, color: selectedRole == 'PLAYER' ? Colors.green.shade800 : Colors.grey)),
-                              const Text('هحجز واتمرن', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => selectedRole = 'OWNER'),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedRole == 'OWNER' ? Colors.blue.shade50 : Colors.grey.shade50,
-                            border: Border.all(color: selectedRole == 'OWNER' ? Colors.blue : Colors.grey.shade300, width: 2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.business, size: 36, color: selectedRole == 'OWNER' ? Colors.blue : Colors.grey),
-                              const SizedBox(height: 8),
-                              Text('صاحب ملعب', style: TextStyle(fontWeight: FontWeight.bold, color: selectedRole == 'OWNER' ? Colors.blue.shade800 : Colors.grey)),
-                              const Text('هسجل ملعبي', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'كلمة السر',
+                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
+              const SizedBox(height: 24),
 
-              // Error message
               if (errorMsg != null)
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -224,7 +183,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
               const SizedBox(height: 16),
 
-              // Submit button
               ElevatedButton(
                 onPressed: isLoading ? null : submit,
                 style: ElevatedButton.styleFrom(
@@ -234,7 +192,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
                 child: isLoading
                     ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : Text(isLogin ? 'دخول' : 'إنشاء حساب', style: const TextStyle(fontSize: 18, color: Colors.white)),
+                    : Text(isLogin ? 'تسجيل دخول' : 'إنشاء حساب', style: const TextStyle(fontSize: 18, color: Colors.white)),
               ),
             ],
           ),

@@ -1,19 +1,30 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// The centralized backend API URL (completely invisible to players and pitch owners, just like Uber)
-// When deploying to Render/Railway, simply paste your live cloud URL here (e.g. 'https://pitchup-backend.onrender.com/api')
-const String kProductionApiUrl = 'http://10.0.2.2:3001/api';
+const String kProductionApiUrl = 'https://spotaiaaa-pmjwv91do-spotaia.vercel.app/api';
 
 final dioProvider = Provider<Dio>((ref) {
-  return Dio(BaseOptions(
+  final dio = Dio(BaseOptions(
     baseUrl: kProductionApiUrl,
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 15),
   ));
+  
+  dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
+      return handler.next(options);
+    },
+  ));
+
+  return dio;
 });
 
-// Current logged in user (null = show AuthScreen)
 final currentUserProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
 
 final pitchesProvider = FutureProvider<List<dynamic>>((ref) async {
