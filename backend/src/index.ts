@@ -22,6 +22,15 @@ declare global {
   }
 }
 
+const requireRole = (roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      res.status(403).json({ error: 'ممنوع الدخول' });
+      return;
+    }
+    next();
+  };
+};
 const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
