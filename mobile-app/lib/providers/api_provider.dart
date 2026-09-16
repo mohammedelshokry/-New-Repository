@@ -1,8 +1,8 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String kProductionApiUrl = 'https://spotaiaaa-pmjwv91do-spotaia.vercel.app/api';
+const String kProductionApiUrl = 'https://rude-apples-yell.loca.lt/api';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
@@ -13,6 +13,7 @@ final dioProvider = Provider<Dio>((ref) {
   
   dio.interceptors.add(InterceptorsWrapper(
     onRequest: (options, handler) async {
+      options.headers['Bypass-Tunnel-Reminder'] = 'true';
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       if (token != null) {
