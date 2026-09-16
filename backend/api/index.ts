@@ -25,7 +25,7 @@ declare global {
 const requireRole = (roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user || !roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'ممنوع الدخول' });
+      res.status(403).json({ error: 'Ù…Ù…Ù†ÙˆØ¹ Ø§Ù„Ø¯Ø®ÙˆÙ„' });
       return;
     }
     next();
@@ -183,7 +183,20 @@ app.patch('/api/pitches/:id/status', authMiddleware, requireRole(['OWNER', 'ADMI
 });
 
 // Bookings
-app.post('/api/bookings', authMiddleware, async (req: Request, res: Response) => {
+
+  app.get('/api/match-requests', authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const matchRequests = await prisma.matchRequest.findMany({
+        include: { creator: { select: { name: true, phone: true } } },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.json(matchRequests);
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to fetch match requests' });
+    }
+  });
+
+  app.post('/api/bookings', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { pitchId, startTime, endTime } = req.body;
     const start = new Date(startTime);
