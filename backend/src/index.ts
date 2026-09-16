@@ -249,3 +249,5 @@ app.get('/api/owner/bookings', authMiddleware, requireRole(['OWNER']), async (re
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export default app;
