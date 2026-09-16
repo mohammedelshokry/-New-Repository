@@ -1,4 +1,4 @@
-name: Build Android APK
+﻿name: Build Android APK
 
 on:
   push:
@@ -28,21 +28,15 @@ jobs:
       - name: Install Dependencies
         run: |
           cd mobile-app
-          flutter pub get > pub_log.txt 2>&1 || true
+          flutter pub get
 
       - name: Build Release APK
         run: |
           cd mobile-app
-          flutter build apk --release > build_log.txt 2>&1 || true
+          flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: PitchUp-Release-APK
           path: mobile-app/build/app/outputs/flutter-apk/app-release.apk
-      - name: Upload Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Build-Logs
-          path: mobile-app/*_log.txt
