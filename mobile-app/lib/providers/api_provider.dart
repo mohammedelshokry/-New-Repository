@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String kProductionApiUrl = 'https://spotaiaaa.vercel.app/api';
+const String kProductionApiUrl = 'http://localhost:3001/api';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
@@ -44,4 +44,28 @@ final matchRequestsProvider = FutureProvider<List<dynamic>>((ref) async {
   final dio = ref.watch(dioProvider);
   final response = await dio.get('/match-requests');
   return response.data;
+});
+
+final myBookingsProvider = FutureProvider<List<dynamic>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/bookings');
+  return response.data;
+});
+
+final leaderboardProvider = FutureProvider<List<dynamic>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/users/leaderboard');
+  return response.data;
+});
+
+final venueLeaderboardProvider = FutureProvider.family<List<dynamic>, String>((ref, pitchId) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/pitches/${pitchId}/leaderboard');
+  return response.data;
+});
+
+final notificationsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final res = await dio.get('/notifications');
+  return res.data;
 });

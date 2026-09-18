@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
+import 'manage_pitch_screen.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -9,13 +11,32 @@ class OwnerDashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<OwnerDashboardScreen> createState() => _OwnerDashboardScreenState();
 }
 
-class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
+class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   void _showAddPitchDialog() {
     final nameCtrl = TextEditingController();
     final locCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
     final descCtrl = TextEditingController();
+    final mapCtrl = TextEditingController();
+    TimeOfDay openTime = const TimeOfDay(hour: 14, minute: 0);
+    TimeOfDay closeTime = const TimeOfDay(hour: 2, minute: 0);
+    
     String surface = 'Artificial Grass';
+    String category = 'Football';
     bool indoor = false;
 
     showModalBottomSheet(
@@ -63,89 +84,116 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                   controller: priceCtrl,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: 'سعر الساعة (ج.م)',
+                    labelText: 'السعر في الساعة (جنيه)',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.attach_money),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'وصف الملعب والمرافق',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.description),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: surface,
-                  decoration: const InputDecoration(
-                    labelText: 'نوع الأرضية',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'Artificial Grass', child: Text('نجيل صناعي')),
-                    DropdownMenuItem(value: 'Natural Grass', child: Text('نجيل طبيعي')),
-                    DropdownMenuItem(value: 'Blue Turf', child: Text('بادل (ترتان أزرق)')),
-                    DropdownMenuItem(value: 'Hardwood', child: Text('باركيه صالة مغطاة')),
-                    DropdownMenuItem(value: 'Cloth', child: Text('طاولة بلياردو / سنوكر')),
-                  ],
-                  onChanged: (val) => setModalState(() => surface = val ?? surface),
-                ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  title: const Text('ملعب مغطى / داخلي (Indoor)'),
-                  value: indoor,
-                  onChanged: (val) => setModalState(() => indoor = val),
-                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () async {
-                    if (nameCtrl.text.isEmpty || locCtrl.text.isEmpty || priceCtrl.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('من فضلك أكمل البيانات المطلوبة')),
-                      );
-                      return;
-                    }
-
-                    final dio = ref.read(dioProvider);
                     try {
+                      final dio = ref.read(dioProvider);
                       await dio.post('/pitches', data: {
-                        'name': nameCtrl.text.trim(),
-                        'location': locCtrl.text.trim(),
-                        'pricePerHour': double.tryParse(priceCtrl.text.trim()) ?? 150,
-                        'description': descCtrl.text.trim(),
+                        'name': nameCtrl.text,
+                        'location': locCtrl.text,
+                        'pricePerHour': double.tryParse(priceCtrl.text) ?? 200,
+                        'category': category,
                         'surface': surface,
                         'indoor': indoor,
-                        'amenities': ['إضاءة ليلية', 'غرف تبديل ملابس', 'موقف سيارات'],
-                        'images': [
-                          'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop'
-                        ],
+                        'openTime': '${openTime.hour.toString().padLeft(2,'0')}:${openTime.minute.toString().padLeft(2,'0')}',
+                        'closeTime': '${closeTime.hour.toString().padLeft(2,'0')}:${closeTime.minute.toString().padLeft(2,'0')}',
+                        'images': 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&q=80&w=800',
+                        'description': descCtrl.text,
+                        'googleMapsLink': mapCtrl.text,
+                        'amenities': 'كرة، حمامات، كشافات'
                       });
-
-                      if (!mounted) return;
-                      Navigator.pop(ctx);
-                      ref.invalidate(pitchesProvider);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تمت إضافة الملعب بنجاح!')),
-                      );
+                      ref.refresh(pitchesProvider);
+                      if (mounted) Navigator.pop(ctx);
                     } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('فشل إضافة الملعب: $e')),
-                      );
+                      if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('خطأ: $e')));
                     }
                   },
-                  child: const Text('حفظ ونشر الملعب', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: const Text('إضافة الملعب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(value, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(title, style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updateBookingStatus(String id, String status) async {
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.patch('/bookings/$id/status', data: {'status': status});
+      ref.refresh(myBookingsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'CONFIRMED' ? 'تم تأكيد الحجز' : 'تم رفض الحجز')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+    }
+  }
+
+  Widget _buildBookingCard(dynamic b, {required bool isPending}) {
+    final st = DateTime.parse(b['startTime']).toLocal();
+    final et = DateTime.parse(b['endTime']).toLocal();
+    
+    return Card(
+      color: const Color(0xFF1A1A1A),
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('${b['user']['name']} - ${b['pitch']['name']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${st.hour}:00 - ${et.hour}:00', style: const TextStyle(color: Color(0xFF00E5FF))),
+              trailing: Text('${b['ownerAmount']} ج.م', style: const TextStyle(color: Color(0xFFFF9100), fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+            if (isPending)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => _updateBookingStatus(b['id'], 'REJECTED'),
+                    child: const Text('رفض', style: TextStyle(color: Colors.red)),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E5FF), foregroundColor: Colors.black),
+                    onPressed: () => _updateBookingStatus(b['id'], 'CONFIRMED'),
+                    child: const Text('قبول الحجز', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              )
+          ],
         ),
       ),
     );
@@ -155,103 +203,124 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final pitchesAsync = ref.watch(pitchesProvider);
+    final bookingsAsync = ref.watch(myBookingsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text('لوحة تحكم الملعب - مرحباً ${user?['name'] ?? ''}'),
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: const Color(0xFF121212),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () => context.push('/notifications'),
+          ),
           IconButton(
             tooltip: 'تسجيل خروج',
             icon: const Icon(Icons.logout),
             onPressed: () => ref.read(currentUserProvider.notifier).state = null,
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFF00E5FF),
+          labelColor: const Color(0xFF00E5FF),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(text: 'الملاعب', icon: Icon(Icons.stadium)),
+            Tab(text: 'طلبات الحجز', icon: Icon(Icons.calendar_month)),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: const Color(0xFF121212),
         foregroundColor: Colors.white,
         onPressed: _showAddPitchDialog,
         icon: const Icon(Icons.add),
         label: const Text('إضافة ملعب'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Quick Stats
-            Row(
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Tab 1: Pitches
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _statCard('حساب المالك', user?['phone'] ?? '', Icons.person, Colors.blue),
+                Row(
+                  children: [
+                    Expanded(child: _statCard('حساب المالك', user?['phone'] ?? '', Icons.person, Colors.blue)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _statCard('حالة الحساب', 'نشط ومعتمد', Icons.verified, Colors.green)),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _statCard('حالة الحساب', 'نشط ومعتمد', Icons.verified, Colors.green),
+                const SizedBox(height: 24),
+                pitchesAsync.when(
+                  data: (pitches) {
+                    final ownerPitches = pitches.where((p) => p['ownerId'] == user?['id']).toList();
+                    if (ownerPitches.isEmpty) return const Center(child: Text('لا توجد ملاعب. قم بإضافة ملعب جديد.'));
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: ownerPitches.length,
+                      itemBuilder: (context, index) {
+                        final p = ownerPitches[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManagePitchScreen(pitch: p))),
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                (p['images'] is List && (p['images'] as List).isNotEmpty) ? p['images'][0] : (p['images'] is String && (p['images'] as String).isNotEmpty && !(p['images'] as String).startsWith('[')) ? p['images'] : 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&q=80&w=800',
+                                width: 60, height: 60, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.stadium, size: 40),
+                              ),
+                            ),
+                            title: Text(p['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('${p['location']} • ${p['surface']}'),
+                            trailing: Text('${p['pricePerHour']} ج.م/ساعة', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Text('خطأ في التحميل: $err'),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'الملاعب المتاحة على المنصة',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            pitchesAsync.when(
-              data: (pitches) => ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: pitches.length,
-                itemBuilder: (context, index) {
-                  final p = pitches[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          p['images']?[0] ?? '',
-                          width: 60, height: 60, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.stadium, size: 40),
-                        ),
-                      ),
-                      title: Text(p['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('${p['location']} • ${p['surface']}'),
-                      trailing: Text(
-                        '${p['pricePerHour']} ج.م/ساعة',
-                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('خطأ في التحميل: $err'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+          // Tab 2: Bookings
+          bookingsAsync.when(
+            data: (bookings) {
+              if (bookings.isEmpty) return const Center(child: Text('لا توجد حجوزات', style: TextStyle(color: Colors.white)));
+              
+              final pending = bookings.where((b) => b['status'] == 'PENDING').toList();
+              final confirmed = bookings.where((b) => b['status'] == 'CONFIRMED').toList();
 
-  Widget _statCard(String title, String val, IconData icon, Color col) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: col.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: col.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: col, size: 24),
-          const SizedBox(height: 8),
-          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-          const SizedBox(height: 4),
-          Text(val, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: col)),
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (pending.isNotEmpty) ...[
+                    const Text('طلبات قيد الانتظار', style: TextStyle(color: Color(0xFFFF9100), fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    ...pending.map((b) => _buildBookingCard(b, isPending: true)),
+                    const SizedBox(height: 20),
+                  ],
+                  const Text('حجوزات مؤكدة', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  if (confirmed.isEmpty) const Text('لا توجد حجوزات مؤكدة', style: TextStyle(color: Colors.grey)),
+                  ...confirmed.map((b) => _buildBookingCard(b, isPending: false)),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(child: Text('خطأ: $e', style: const TextStyle(color: Colors.white))),
+          ),
         ],
       ),
     );

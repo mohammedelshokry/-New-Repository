@@ -8,11 +8,16 @@ datasource db {
 }
 
 model User {
+  messages        Message[]
   id           String   @id @default(uuid())
   phone        String   @unique
   name         String
   passwordHash String
   role         String   @default("PLAYER")
+  profilePic   String?  
+  points       Int      @default(0)
+  level        String   @default("BRONZE")
+  matchesPlayed Int     @default(0)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -20,18 +25,26 @@ model User {
   bookings      Booking[]
   matchRequests MatchRequest[]
   pitches       Pitch[]
+  reviews       Review[]
+  notifications Notification[]
 }
 
 model Pitch {
   id           String   @id @default(uuid())
+  category     String   @default("Football")
   name         String
   description  String
   location     String
+  googleMapsLink String?
+  openTime     String   @default("14:00")
+  closeTime    String   @default("02:00")
   surface      String
   indoor       Boolean  @default(false)
   amenities    String
   pricePerHour Float
   images       String
+  rating       Float    @default(0)
+  totalReviews Int      @default(0)
   isActive     Boolean  @default(true)
   ownerId      String
   createdAt    DateTime @default(now())
@@ -39,6 +52,7 @@ model Pitch {
 
   owner    User      @relation(fields: [ownerId], references: [id])
   bookings Booking[]
+  reviews  Review[]
 }
 
 model Booking {
@@ -52,6 +66,8 @@ model Booking {
   ownerAmount   Float
   status        String   @default("CONFIRMED")
   paymentStatus String   @default("UNPAID")
+  isManual      Boolean  @default(false)
+  isReviewed    Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -62,7 +78,32 @@ model Booking {
   @@index([userId])
 }
 
+model Review {
+  id        String   @id @default(uuid())
+  pitchId   String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  pitch Pitch @relation(fields: [pitchId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
 model MatchRequest {
+  messages        Message[]
   id           String   @id @default(uuid())
   creatorId    String
   title        String
@@ -75,4 +116,15 @@ model MatchRequest {
   updatedAt    DateTime @updatedAt
 
   creator User @relation(fields: [creatorId], references: [id])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  content        String
+  matchRequestId String
+  senderId       String
+  createdAt      DateTime     @default(now())
+
+  matchRequest   MatchRequest @relation(fields: [matchRequestId], references: [id])
+  sender         User         @relation(fields: [senderId], references: [id])
 }

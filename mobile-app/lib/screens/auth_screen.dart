@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -100,9 +101,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.sports_soccer, color: selectedRole == 'PLAYER' ? Colors.green : Colors.grey),
+                    Icon(Icons.sports_soccer, color: selectedRole == 'PLAYER' ? const Color(0xFF00E5FF) : Colors.grey),
                     const SizedBox(width: 8),
-                    Text('لاعب', style: TextStyle(color: selectedRole == 'PLAYER' ? Colors.green : Colors.grey, fontWeight: FontWeight.bold)),
+                    Text('لاعب', style: TextStyle(color: selectedRole == 'PLAYER' ? const Color(0xFF00E5FF) : Colors.grey, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -121,9 +122,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.stadium, color: selectedRole == 'OWNER' ? Colors.green : Colors.grey),
+                    Icon(Icons.stadium, color: selectedRole == 'OWNER' ? const Color(0xFF00E5FF) : Colors.grey),
                     const SizedBox(width: 8),
-                    Text('صاحب ملعب', style: TextStyle(color: selectedRole == 'OWNER' ? Colors.green : Colors.grey, fontWeight: FontWeight.bold)),
+                    Text('صاحب ملعب', style: TextStyle(color: selectedRole == 'OWNER' ? const Color(0xFF00E5FF) : Colors.grey, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -149,22 +150,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Logo
-                  Hero(
-                    tag: 'app_logo',
-                    child: Container(
-                      width: 90, height: 90,
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade600,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
-                        ]
+                  Center(
+                      child: Hero(
+                        tag: 'app_logo',
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Image.network('/spotaia_logo.jpg', height: 160, width: 160, fit: BoxFit.contain, errorBuilder: (_,__,___) => const SizedBox()),
+                        ),
                       ),
-                      child: const Icon(Icons.sports_soccer, color: Colors.white, size: 50),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text('PitchUp', textAlign: TextAlign.center, style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.green.shade800, letterSpacing: -1)),
+                    ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+                    const SizedBox(height: 16),
+                    const Text('Spotaia', textAlign: TextAlign.center, style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: const Color(0xFF00E5FF), letterSpacing: -1)).animate().fade(duration: 800.ms).slideY(begin: 0.3),
+
                   Text(isLogin ? 'مرحباً بعودتك للملعب!' : 'ابدأ رحلتك الرياضية', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                   const SizedBox(height: 40),
 
@@ -218,11 +215,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       decoration: InputDecoration(
                         labelText: 'الاسم بالكامل',
                         prefixIcon: const Icon(Icons.person_outline),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.green, width: 2)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: const Color(0xFF00E5FF), width: 2)),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: const Color(0xFF1A1A1A),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -235,11 +232,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     decoration: InputDecoration(
                       labelText: 'رقم الهاتف',
                       prefixIcon: const Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.green, width: 2)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: const Color(0xFF00E5FF), width: 2)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: const Color(0xFF1A1A1A),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -256,11 +253,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         
                         onPressed: () => setState(() => obscurePassword = !obscurePassword),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.green, width: 2)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: const Color(0xFF00E5FF), width: 2)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: const Color(0xFF1A1A1A),
                     ),
                   ),
                   const SizedBox(height: 24),

@@ -1,0 +1,76 @@
+# موجه لـ GPT-6 Astra (أو أي نموذج ذكاء اصطناعي מתקדם)
+
+يرجى نسخ النص التالي بالكامل وإرساله للنموذج الآخر:
+
+---
+**[SYSTEM PROMPT & INSTRUCTIONS FOR AI]**
+You are an elite Software Architect, Senior Flutter UI/UX Designer, and Expert Product Manager. 
+I am presenting you with the complete current architecture, features, and technical specifications of my application named **"Spotaia"** (a sports and entertainment booking platform).
+Your task is to thoroughly review this system and act as a visionary consultant. 
+
+I want you to:
+1. **Analyze:** Identify any architectural flaws, missing essential features, or UX bottlenecks in the current implementation.
+2. **Elevate the UX/UI:** Suggest mind-blowing animations, micro-interactions, page transitions, and UI polishing that fit a "Dark Neon Futuristic Sports Persona" (Black/Dark Grey background, Neon Blue, Neon Orange). 
+3. **Master Plan:** Output a comprehensive, step-by-step master plan of the EXACT tasks required to transform this app from a solid MVP into an absolute masterpiece (نسخة جبارة). Be highly specific about the code, packages (e.g., specific flutter_animate effects, Rive, Lottie, slivers), and backend optimizations.
+
+**[SPOTAIA APPLICATION SPECIFICATIONS]**
+
+### 1. General Overview & Theme
+- **App Name:** Spotaia
+- **Niche:** Booking sports venues (Football, Padel) and entertainment lounges (PlayStation, etc.), plus a player-matching community.
+- **Theme:** Dark Neon. Backgrounds (`#121212`, `#0A0A0A`), Primary Color Neon Blue (`#00E5FF`), Secondary Color Neon Orange (`#FF9100`).
+- **Tech Stack:** 
+  - **Frontend:** Flutter Web/Mobile, Riverpod (State Management), GoRouter (Navigation), Dio (HTTP), flutter_animate (Animations).
+  - **Backend:** Node.js, Express, TypeScript.
+  - **Database & ORM:** PostgreSQL, Prisma ORM.
+  - **Auth:** JWT (JSON Web Tokens).
+
+### 2. Backend Architecture & Database Schema
+- **Concurrency Handling:** Implemented strict Pessimistic Row-Level Locking (`SELECT ... FOR UPDATE` via Prisma `$executeRawUnsafe`) in the `POST /api/bookings` endpoint to completely eliminate race conditions and double-bookings under extreme concurrent load.
+- **Models:**
+  - `User`: `id`, `phone` (unique), `name`, `passwordHash`, `role` (PLAYER, OWNER, ADMIN), `profilePic`, `points` (Gamification), `level` (e.g., BRONZE, SILVER, GOLD), `matchesPlayed`.
+  - `Pitch` (Venues): `id`, `ownerId`, `category` (Football, Padel, PlayStation, etc.), `name`, `description`, `location`, `openTime`, `closeTime`, `surface`, `indoor` (boolean), `pricePerHour`, `images` (JSON array), `rating`, `totalReviews`.
+  - `Booking`: `id`, `pitchId`, `userId`, `startTime`, `endTime`, `status`, `price`.
+  - `Review`: `id`, `pitchId`, `userId`, `rating`, `comment`.
+  - `MatchRequest`: `id`, `creatorId`, `title`, `description`, `matchTime`, `missingSpots`, `costPerSpot`, `status`.
+
+### 3. Frontend Features & Screens
+
+#### A. Authentication (`AuthScreen`)
+- Login and Registration forms.
+- Users choose their role upon registration: "لاعب" (Player) or "صاحب منشأة" (Owner).
+- Beautiful Spotaia Logo with scaling animation (`BoxFit.contain` wrapped in `Center` to prevent stretch).
+
+#### B. Main Navigation (`HomeScreen`)
+- Uses `NavigationBar` with 4 Tabs. Icons have `flutter_animate` scale and pop effects on selection.
+- **Tab 1: Venues (الملاعب المتاحة):**
+  - Horizontal scrollable `ChoiceChip` for categories (All, Football, Padel, PlayStation).
+  - Venues list dynamically filters based on category selection.
+  - Venue cards show images, location, price, and **Virtual Points** earned per hour (calculated as `pricePerHour * 0.5`). Cards enter the screen with staggered Fade and SlideX animations.
+- **Tab 2: Community (مجتمع اللاعبين):**
+  - Fetches from `/api/match-requests`. Shows posts from players looking for others to join their match and split the cost.
+- **Tab 3: Leaderboard (الترتيب):**
+  - Fetches top players sorted by `points` descending. 
+  - Top 3 players have special UI treatments (Gold 🥇, Silver 🥈, Bronze 🥉 highlighting).
+- **Tab 4: Profile (حسابي):**
+  - Displays User Info, Role, Avatar.
+  - **Edit Profile:** Opens a dialog to update Name, Phone, and Profile Picture (PUT `/api/users/me`).
+  - **My Bookings:** Displays a list of the user's personal bookings fetched from the database, rendered with staggered animations.
+
+#### C. Venue Details (`PitchDetailsScreen`)
+- Displays venue details, amenities, and available time slots.
+- User can select a Date and Start/End times to calculate the total price and book.
+- **Review System Logic:** The "Add Review" button ONLY appears if the user has a confirmed booking for this specific venue AND has not reviewed it before.
+
+#### D. Owner Dashboard (`OwnerDashboardScreen` & `ManagePitchScreen`)
+- Owners see their total revenue, total bookings, and a list of their owned venues.
+- Owners can add/edit venues, defining name, category (Dropdown), price, times, surface type, and upload image links.
+
+### 4. Current UX/UI Transitions
+- **Page Routing:** GoRouter uses `FadeTransition` for pushing screens (e.g., from Home to Pitch Details).
+- **Tab Switching:** Uses `AnimatedSwitcher` wrapping a `SlideTransition` and `FadeTransition` (300ms) for ultra-smooth tab switching.
+- **Micro-interactions:** Buttons and Navigation Bar items use `flutter_animate` (scale/fade/slide) when rendered or interacted with. Global `splashColor` is Neon Blue with 30% opacity for touch ripples.
+
+---
+**[END OF SPECIFICATION]**
+Please provide your review, required fixes, UI/UX animation suggestions, and the comprehensive master plan.

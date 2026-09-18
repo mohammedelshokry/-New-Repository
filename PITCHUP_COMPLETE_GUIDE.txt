@@ -1,0 +1,332 @@
+﻿================================================================================
+         PITCHUP - دليل المشروع الكامل (شرح شامل لاي ايجنت يكمل عليه)
+================================================================================
+تاريخ الكتابة: سبتمبر 2026
+كاتب الملف: Antigravity AI Assistant (Google DeepMind)
+الريبو: https://github.com/mohammedelshokry/-New-Repository
+================================================================================
+
+───────────────────────────────────────────────
+ 1. فكرة المشروع
+───────────────────────────────────────────────
+
+PitchUp هي منصة حجز ملاعب رياضية (فوتبول/باسكت/تنس) بتشتغل زي اوبر بالظبط:
+  - صاحب المنصة (الـ Super Admin) هو المالك الوحيد للنظام
+  - اصحاب الملاعب (Pitch Owners) بيسجلوا ملاعبهم على التطبيق
+  - اللاعبون (Players) بيحجزوا الملاعب
+  - المنصة بتاخد عمولة 10% من كل حجز
+
+ملاحظة المستخدم: المستخدم مش عايز اي مميزات AI تظهر للمستخدمين النهائيين.
+                   مش عايز اعدادات سيرفر او خيارات تقنية تظهر للاعبين او اصحاب الملاعب.
+
+───────────────────────────────────────────────
+ 2. المعلومات الاساسية
+───────────────────────────────────────────────
+
+GitHub Username  : mohammedelshokry
+GitHub Repo URL  : https://github.com/mohammedelshokry/-New-Repository
+Local Project Dir: c:\Users\MoBadawy\Desktop\New folder\
+Flutter Path     : C:\Entertainment\sdk\flutter\bin\flutter.bat
+Node.js          : مثبت على الجهاز
+Java             : 1.8 (مثبت)
+Vercel Dashboard : https://new-repository-lime.vercel.app
+  (ملحوظة: الداشبورد بيظهر 404 لان الـ backend مش deployed بعد)
+
+───────────────────────────────────────────────
+ 3. معمارية المشروع (Architecture)
+───────────────────────────────────────────────
+
+المشروع عبارة عن 3 تطبيقات:
+
+  [1] Backend API         [2] Mobile App      [3] Web Admin
+  Node.js + Express       Flutter             Next.js
+  SQLite (Prisma)         للـ Players         للـ Super Admin
+  يشتغل على Cloud         و Owners فقط       على Vercel
+
+  - Mobile App بتتكلم مع Backend عن طريق HTTP API
+  - Web Dashboard بتتكلم مع Backend عن طريق HTTP API
+
+───────────────────────────────────────────────
+ 4. هيكل الملفات الكامل
+───────────────────────────────────────────────
+
+New folder/
+├── backend/                          ← الـ Node.js API server
+│   ├── src/
+│   │   └── index.ts                  ← كل الـ API routes (~336 سطر)
+│   ├── prisma/
+│   │   ├── schema.prisma             ← تعريف قاعدة البيانات (SQLite)
+│   │   └── seed.ts                   ← بيانات تجريبية اولية
+│   ├── Dockerfile                    ← للنشر على Cloud
+│   ├── package.json                  ← scripts: build, start, seed
+│   └── .env                          ← متغيرات البيئة
+│
+├── mobile-app/                       ← تطبيق Flutter للموبايل
+│   ├── lib/
+│   │   ├── main.dart                 ← نقطة البداية + التوجيه
+│   │   ├── providers/
+│   │   │   └── api_provider.dart     ← Dio + API URL + providers
+│   │   └── screens/
+│   │       ├── auth_screen.dart      ← تسجيل دخول/انشاء حساب
+│   │       ├── home_screen.dart      ← 3 tabs: ملاعب، طلبات، بروفايل
+│   │       ├── pitch_details_screen.dart ← تفاصيل الملعب + الحجز
+│   │       └── owner_dashboard_screen.dart ← لوحة صاحب الملعب
+│   └── pubspec.yaml                  ← المكتبات: riverpod, go_router, dio
+│
+├── web-dashboard/                    ← لوحة تحكم الـ Super Admin (Next.js)
+│   └── src/
+│       ├── app/
+│       │   └── page.tsx              ← واجهة الداشبورد الكاملة (4 tabs)
+│       └── lib/
+│           └── api.ts                ← كل طلبات الـ API للداشبورد
+│
+├── .github/
+│   └── workflows/
+│       └── build-apk.yml            ← GitHub Actions لبناء الـ APK
+│
+└── تشغيل_المنظومة.bat               ← سكريبت تشغيل محلي بكليك واحد
+
+───────────────────────────────────────────────
+ 5. قاعدة البيانات (Prisma Schema)
+───────────────────────────────────────────────
+
+الموديلز الموجودة في backend/prisma/schema.prisma:
+
+  User { id, name, phone (unique), role (PLAYER|OWNER), createdAt }
+  Pitch { id, name, description, location, pricePerHour, images (JSON string),
+          amenities (JSON string), sport (FOOTBALL|BASKETBALL|TENNIS), ownerId, createdAt }
+  Booking { id, userId, pitchId, date (YYYY-MM-DD), startTime (HH:mm),
+             endTime (HH:mm), status (CONFIRMED|CANCELLED), price, createdAt }
+  MatchRequest { id, userId, sport, location, date, time, playersNeeded, message, createdAt }
+
+ملاحظة مهمة: SQLite مش بيدعم enums او arrays، عشان كده:
+  - الـ role, status, sport كلها String مش enum
+  - images و amenities مخزنة كـ JSON string وبتتـ parse بـ safeParse() في index.ts
+
+───────────────────────────────────────────────
+ 6. الـ API Endpoints الكاملة
+───────────────────────────────────────────────
+
+Base URL (محلي): http://localhost:3001/api
+Base URL (Cloud): [لازم يتحدد بعد الـ deployment - شوف القسم 9]
+
+--- Health ---
+GET  /api/health
+
+--- Pitches ---
+GET  /api/pitches
+GET  /api/pitches/:id
+POST /api/pitches  Body: { name, description, location, pricePerHour, sport, ownerId, images?, amenities? }
+
+--- Bookings ---
+POST  /api/bookings  Body: { userId, pitchId, date, startTime, endTime, price }
+GET   /api/bookings/:userId
+PATCH /api/bookings/:id/cancel
+
+--- Match Requests ---
+GET  /api/match-requests
+POST /api/match-requests  Body: { userId, sport, location, date, time, playersNeeded, message }
+
+--- Users / Auth ---
+POST /api/users/register  Body: { name, phone, role }
+POST /api/users/login     Body: { phone }
+GET  /api/users
+
+--- Admin ---
+GET    /api/admin/stats
+GET    /api/admin/bookings
+DELETE /api/admin/pitches/:id
+DELETE /api/admin/users/:id
+
+───────────────────────────────────────────────
+ 7. الـ Mobile App (Flutter) - تفاصيل
+───────────────────────────────────────────────
+
+التوجيه (GoRouter في main.dart):
+  /           → AuthScreen (لو مفيش مستخدم مسجل)
+  /home       → HomeScreen (لو role == PLAYER)
+  /owner      → OwnerDashboardScreen (لو role == OWNER)
+  /pitch/:id  → PitchDetailsScreen
+
+السطر الحرج (لازم يتغير قبل build الـ APK):
+  ملف: mobile-app/lib/providers/api_provider.dart
+  السطر: const String kProductionApiUrl = 'http://10.0.2.2:3001/api';
+  يتغير لـ: const String kProductionApiUrl = 'https://[RAILWAY-URL]/api';
+
+مكتبات pubspec.yaml:
+  flutter_riverpod: ^2.4.9
+  go_router: ^13.2.0
+  dio: ^5.4.0
+  cached_network_image: ^3.3.1
+  google_fonts: ^6.1.0
+  intl: ^0.19.0
+
+───────────────────────────────────────────────
+ 8. الـ Web Admin Dashboard (Next.js) - تفاصيل
+───────────────────────────────────────────────
+
+ملف: web-dashboard/src/app/page.tsx
+  - واجهة داكنة (Dark Mode)
+  - 4 Tabs: Overview/Earnings, All Pitches, Users Management, Bookings Log
+  - Admin يقدر يحذف اي ملعب او مستخدم
+
+السطر الحرج في web-dashboard/src/lib/api.ts:
+  baseURL: 'http://localhost:3001/api'
+  لازم يتغير لـ: baseURL: 'https://[RAILWAY-URL]/api'
+
+Vercel: الريبو متربط وكل push بيعمل redeploy تلقائي
+URL: https://new-repository-lime.vercel.app
+
+───────────────────────────────────────────────
+ 9. خطوات الـ Deployment الكاملة (الاولوية القصوى)
+───────────────────────────────────────────────
+
+المشكلة الحالية:
+  الداشبورد على Vercel بيظهر 404 لان الـ backend على localhost مش Cloud
+  كمان SQLite بيتمسح على Cloud عند كل restart
+
+STEP 1: انشاء PostgreSQL على Neon.tech (مجاني - مش محتاج كارد)
+  1. روح لـ https://neon.tech
+  2. Sign up بـ GitHub
+  3. New Project → اسمه "pitchup"
+  4. خد الـ Connection String:
+     postgresql://neondb_owner:xxxxxx@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+
+STEP 2: تحديث الـ Backend لـ PostgreSQL
+  افتح: backend/prisma/schema.prisma
+  غير:  provider = "sqlite"
+  لـ:   provider = "postgresql"
+
+  في backend/.env:
+  غير:  DATABASE_URL="file:./dev.db"
+  لـ:   DATABASE_URL="[Neon Connection String]"
+
+  رن في terminal:
+    cd "c:\Users\MoBadawy\Desktop\New folder\backend"
+    npx prisma migrate deploy
+    npm run seed
+
+STEP 3: نشر الـ Backend على Railway.app (مجاني - مش محتاج كارد)
+  1. روح لـ https://railway.app
+  2. Sign in بـ GitHub
+  3. New Project → Deploy from GitHub repo → mohammedelshokry/-New-Repository
+  4. Root Directory: backend
+  5. Variables:
+     - DATABASE_URL = [Neon Connection String]
+     - PORT = 3001
+     - NODE_ENV = production
+  6. Railway هيديك URL: https://new-repository-production.up.railway.app
+
+STEP 4: تحديث الـ API URLs
+  mobile-app/lib/providers/api_provider.dart:
+    const String kProductionApiUrl = 'https://[RAILWAY-URL]/api';
+
+  web-dashboard/src/lib/api.ts:
+    baseURL: 'https://[RAILWAY-URL]/api'
+
+STEP 5: Push لـ GitHub
+  cd "c:\Users\MoBadawy\Desktop\New folder"
+  git add .
+  git commit -m "Update API URLs to production Railway backend + PostgreSQL migration"
+  git push origin main
+
+  بعد الـ push:
+  - Vercel هيعمل redeploy تلقائي للداشبورد
+  - GitHub Actions هيبني الـ APK تلقائي
+
+STEP 6: تحميل الـ APK
+  1. روح لـ https://github.com/mohammedelshokry/-New-Repository/actions
+  2. افتح "Build Android APK" workflow
+  3. في Artifacts حمل "PitchUp-Release-APK"
+  4. ابعت app-release.apk على WhatsApp
+
+───────────────────────────────────────────────
+ 10. التشغيل المحلي (للتطوير)
+───────────────────────────────────────────────
+
+كليك مرتين على: c:\Users\MoBadawy\Desktop\New folder\تشغيل_المنظومة.bat
+
+او يدوياً:
+
+Backend:
+  cd "c:\Users\MoBadawy\Desktop\New folder\backend"
+  npm install
+  npx prisma generate
+  npx prisma db push
+  npm run seed
+  npm run dev
+
+Web Dashboard:
+  cd "c:\Users\MoBadawy\Desktop\New folder\web-dashboard"
+  npm install
+  npm run dev
+  افتح: http://localhost:3000
+
+Mobile App (Flutter Web للاختبار):
+  cd "c:\Users\MoBadawy\Desktop\New folder\mobile-app"
+  C:\Entertainment\sdk\flutter\bin\flutter.bat pub get
+  C:\Entertainment\sdk\flutter\bin\flutter.bat run -d chrome
+
+───────────────────────────────────────────────
+ 11. مشاكل محتملة وحلولها
+───────────────────────────────────────────────
+
+المشكلة: الداشبورد فاضي او بيظهر خطا
+الحل: تاكد ان الـ Backend على Railway شغال وان الـ URL في api.ts صح
+
+المشكلة: الـ APK مش بيتصل بالـ API
+الحل: تاكد ان kProductionApiUrl في api_provider.dart = Railway URL مش localhost
+
+المشكلة: البيانات بتتمسح كل شوية
+الحل: استخدم Neon PostgreSQL مش SQLite (شوف STEP 1 و 2)
+
+المشكلة: Railway بيوقف الـ app بعد 30 دقيقة (free tier)
+الحل: UptimeRobot (مجاني) - اعمله ping على /api/health كل 5 دقائق
+        https://uptimerobot.com → New Monitor → HTTP(S) → URL: [Railway URL]/api/health
+
+المشكلة: Flutter مش موجود في PATH
+الحل: استخدم المسار الكامل: C:\Entertainment\sdk\flutter\bin\flutter.bat
+
+───────────────────────────────────────────────
+ 12. اولويات الايجنت التالي
+───────────────────────────────────────────────
+
+الاولوية 1 (لازم يتعمل):
+  [أ] انشاء Neon PostgreSQL وتغيير schema.prisma
+  [ب] نشر Backend على Railway
+  [ج] تحديث API URLs في api_provider.dart و api.ts
+  [د] Push لـ GitHub
+  [هـ] تاكيد شغل الداشبورد على Vercel
+  [و] تحميل APK من GitHub Actions
+
+الاولوية 2 (تحسينات):
+  [أ] اضافة Notifications (FCM)
+  [ب] اضافة صور حقيقية للملاعب
+  [ج] اضافة نظام تقييمات
+  [د] اضافة دفع الكتروني (Paymob)
+
+───────────────────────────────────────────────
+ 13. بيانات تجريبية (Seed Data)
+───────────────────────────────────────────────
+
+المستخدمون في backend/prisma/seed.ts:
+  1. محمد أحمد  - 01234567890 - PLAYER
+  2. سارة علي   - 01098765432 - OWNER
+  3. أحمد سامي  - 01112345678 - PLAYER
+
+الملاعب (5 ملاعب فوتبول - من 150 الى 200 جنيه/ساعة)
+
+───────────────────────────────────────────────
+ 14. روابط مفيدة
+───────────────────────────────────────────────
+
+الريبو: https://github.com/mohammedelshokry/-New-Repository
+الداشبورد: https://new-repository-lime.vercel.app
+GitHub Actions (APK): https://github.com/mohammedelshokry/-New-Repository/actions
+Railway.app: https://railway.app
+Neon.tech (PostgreSQL مجاني): https://neon.tech
+UptimeRobot: https://uptimerobot.com
+
+================================================================================
+ نهاية الملف - هذا الملف يحتوي على كل المعلومات اللازمة لاي ايجنت يكمل المشروع
+================================================================================

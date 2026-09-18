@@ -1,0 +1,77 @@
+﻿PitchUp App - Project Handoff & Architecture Document
+======================================================
+This document contains the entire blueprint and progress of the PitchUp platform (Backend + Flutter App).
+
+1. PROJECT OVERVIEW
+-------------------
+PitchUp is a booking and gamification platform for sports venues (Football, Padel, PlayStation, Billiards). 
+Players can book time slots, earn gamification points, level up (Bronze, Silver, Gold, Diamond), and review pitches.
+Owners can add their pitches, set pricing/amenities, view stats, and manually book time slots to block their calendar.
+
+2. TECHNOLOGY STACK
+-------------------
+- Backend: Node.js, Express.js, TypeScript.
+- Database: PostgreSQL (Neon DB), Prisma ORM.
+- Frontend: Flutter (Dart), Riverpod (State Management), GoRouter (Navigation), Dio (Networking).
+
+3. DATABASE ARCHITECTURE (Prisma Schema)
+----------------------------------------
+- User:
+  id, phone (unique), name, passwordHash, role (PLAYER/OWNER), profilePic, points, level, matchesPlayed, isActive
+- Pitch:
+  id, name, category, description, location, googleMapsLink, openTime, closeTime, surface, indoor, amenities, pricePerHour, images, rating, totalReviews, ownerId, isActive
+- Booking:
+  id, userId, pitchId, startTime, endTime, price, platformFee, ownerAmount, status, paymentStatus, isManual, isReviewed
+- Review:
+  id, pitchId, userId, rating, comment
+- Notification & MatchRequest (Future features prepared in Schema)
+
+4. API ENDPOINTS (Backend :3001)
+--------------------------------
+- POST /api/auth/register : Registers a new user (role: PLAYER or OWNER).
+- POST /api/auth/login : Authenticates and returns JWT + user details.
+- GET /api/pitches : Returns all pitches with their reviews and parsed amenities/images.
+- GET /api/pitches/:id : Returns a specific pitch with bookings and reviews.
+- POST /api/pitches : (Owner only) Creates a new pitch.
+- POST /api/bookings : Books a slot. Uses a Serializable Transaction to prevent race conditions. Awards 50 points to the user and recalculates their level automatically.
+- POST /api/pitches/:id/reviews : Submits a review and updates the Pitch's average rating.
+- GET /api/leaderboard : Returns top players ordered by points.
+- GET /api/owner/stats : (Owner only) Returns owner's pitches and financial stats.
+- PUT /api/users/me : Updates current user's profile picture.
+
+5. FLUTTER APP ARCHITECTURE (Frontend :8080)
+--------------------------------------------
+- main.dart: Sets up ProviderScope, GoRouter, and RTL Directionality.
+- api_provider.dart: Contains Dio instance, interceptors for JWT, and StateProviders (currentUserProvider, pitchesProvider, pitchDetailsProvider).
+- AuthScreen: Handles login/register.
+- HomeScreen (Player): 
+  - BottomNavBar with 3 tabs: Pitches, Leaderboard, Profile.
+  - Pitches Tab: Horizontal category filter, displays available pitches.
+  - Leaderboard Tab: Displays top players fetched from /api/leaderboard.
+  - Profile Tab: Displays user's points, level, matches, and allows updating Profile Picture via URL.
+- PitchDetailsScreen: 
+  - Displays pitch images, info, amenities.
+  - Date and Time Pickers (Start/End) for booking.
+  - Renders red boxes for already booked slots on the chosen day.
+  - Contains "Add Review" button and renders existing reviews (with user names and avatars).
+- OwnerDashboardScreen: 
+  - Shows owner's financial summary and pitch list.
+  - Dialog to add a new pitch (Name, Description, Location, Category, Images, Maps Link, Open/Close Time).
+- ManagePitchScreen: 
+  - Allows owner to add Manual Bookings to block out the calendar.
+
+6. RECENT MASTER PLAN ACHIEVEMENTS
+----------------------------------
+Phase 1: DB Overhaul completed successfully.
+Phase 2: Owner Dashboard & Manual Bookings completed.
+Phase 3: Gamification, dynamic level updates, and Leaderboard completed.
+Phase 4: Reviews, Ratings, and Profile Picture logic completed.
+- Exhaustive internal testing resolved all race condition and concurrency overlaps in bookings.
+- Applied massive Null-Safety wrappers across the frontend to prevent Flutter RSOD crashes.
+
+7. NEXT STEPS FOR FUTURE DEVELOPMENT
+------------------------------------
+- Implement cloud image uploading (e.g. Firebase Storage, AWS S3) for Pitches and Profile Pics instead of using direct URLs.
+- Implement the 'MatchRequest' logic (looking for players to complete a team).
+- Integrate actual payment gateways (Paymob / Stripe) for wallet top-ups.
+- Wrap the Flutter Web app into Android/iOS APK/IPA builds.
