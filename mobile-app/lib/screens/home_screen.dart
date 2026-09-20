@@ -9,6 +9,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
 
@@ -65,7 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: _selectedIndex == 1
+      floatingActionButton: _selectedIndex == 2
           ? FloatingActionButton.extended(
               onPressed: () {
                 // TODO: Add Match Request Dialog
@@ -382,9 +383,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     leading: const Icon(Icons.logout, color: Colors.redAccent),
                     title: const Text('تسجيل خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
                     trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                    onTap: () {
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('jwt_token');
                       ref.read(currentUserProvider.notifier).state = null;
-                      context.go('/auth');
+                      if (context.mounted) {
+                        context.go('/auth');
+                      }
                     },
                   ),
                 ],
