@@ -15,8 +15,14 @@ build/
 .DS_Store
 Thumbs.db
 
+# JDK
 jdk17/
 
-
+# Firebase credentials
 backend/firebase-admin.json
 
+# Temporary scripts
+*.py
+
+# Uploaded files (served locally, not needed in git)
+backend/uploads/
