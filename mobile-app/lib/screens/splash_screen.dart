@@ -24,7 +24,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     
     final prefs = await SharedPreferences.getInstance();
     final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
-    final token = prefs.getString('auth_token');
+    final token = prefs.getString('jwt_token');
 
     if (!mounted) return;
 

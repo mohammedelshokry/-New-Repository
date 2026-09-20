@@ -33,8 +33,6 @@ final isInitializedProvider = StateProvider<bool>((ref) => false);
 
 
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final user = ref.watch(currentUserProvider);
-
   return GoRouter(
     initialLocation: '/splash',
     routes: [
@@ -53,6 +51,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) {
+          final user = ref.watch(currentUserProvider);
           if (user == null) {
             return const AuthScreen();
           }
