@@ -96,9 +96,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (mounted) {
          final user = ref.read(currentUserProvider);
          if (user?['role'] == 'OWNER' || user?['role'] == 'ADMIN') {
-           context.go('/');
+           context.go('/home');
          } else {
-           context.go('/');
+           context.go('/home');
          }
       }
     } on DioException catch (e) {

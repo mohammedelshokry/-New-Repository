@@ -380,7 +380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                     onTap: () {
                       ref.read(currentUserProvider.notifier).state = null;
-                      context.go('/');
+                      context.go('/auth');
                     },
                   ),
                 ],

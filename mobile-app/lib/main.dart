@@ -36,13 +36,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final user = ref.watch(currentUserProvider);
 
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     routes: [
       GoRoute(
-        path: '/',
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/auth',
+        builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
+        path: '/home',
         builder: (context, state) {
-          final isInitialized = ref.watch(isInitializedProvider);
-          if (!isInitialized) return const SplashScreen();
           if (user == null) {
             return const AuthScreen();
           }
