@@ -3,6 +3,9 @@ import 'screens/chat_screen.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 import 'package:go_router/go_router.dart';
 import 'providers/api_provider.dart';
 import 'core/theme/app_theme.dart';
@@ -10,6 +13,13 @@ import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/owner_dashboard_screen.dart';
 import 'screens/pitch_details_screen.dart';
+
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+}
 
 void main() {
   runApp(const ProviderScope(child: SpotaiaApp()));

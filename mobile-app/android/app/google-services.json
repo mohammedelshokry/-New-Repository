@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "477682441497",
+    "project_id": "spotaia",
+    "storage_bucket": "spotaia.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:477682441497:android:1a7965fc078ac010983988",
+        "android_client_info": {
+          "package_name": "com.example.pitchup_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiRYYCIKLHSfeLzQ5dOmxxmIK-wX3HZX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

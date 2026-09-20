@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -17,10 +18,36 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
+
+
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
   String _searchQuery = '';
   String _selectedCategory = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    _setupPushNotifications();
+  }
+
+  Future<void> _setupPushNotifications() async {
+    try {
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true, badge: true, sound: true,
+      );
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        String? token = await messaging.getToken();
+        if (token != null) {
+          final dio = ref.read(dioProvider);
+          await dio.put('/users/me', data: {'fcmToken': token});
+        }
+      }
+    } catch (e) {
+      print('FCM Setup error: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
