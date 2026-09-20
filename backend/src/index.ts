@@ -694,7 +694,7 @@ app.get('/api/admin/stats', requireAuth, requireRole(['ADMIN']), async (req: Req
     const totalPitches = await prisma.pitch.count();
     const totalBookings = await prisma.booking.count();
     const bookings = await prisma.booking.findMany({ where: { status: 'CONFIRMED' } });
-    const totalRevenue = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
     res.json({ totalUsers, totalPitches, totalBookings, totalRevenue });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

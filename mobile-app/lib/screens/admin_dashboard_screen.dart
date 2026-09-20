@@ -27,12 +27,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© - Ù…Ø±Ø­Ø¨Ø§Ù‹ ${user?['name'] ?? ''}'),
+        title: Text('لوحة الإدارة - مرحباً ${user?['name'] ?? ''}'),
         backgroundColor: AppTheme.surfaceDark,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: 'ØªØ³Ø¬ÙŠÙ„ Ø®Ø±ÙˆØ¬',
+            tooltip: 'تسجيل خروج',
             icon: const Icon(Icons.logout, color: Colors.redAccent),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
@@ -50,9 +50,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
           labelColor: AppTheme.neonBlue,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(text: 'Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª', icon: Icon(Icons.analytics_outlined)),
-            Tab(text: 'Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†', icon: Icon(Icons.group_outlined)),
-            Tab(text: 'Ø§Ù„Ù…Ù„Ø§Ø¹Ø¨', icon: Icon(Icons.stadium_outlined)),
+            Tab(text: 'الإحصائيات', icon: Icon(Icons.analytics_outlined)),
+            Tab(text: 'المستخدمين', icon: Icon(Icons.group_outlined)),
+            Tab(text: 'الملاعب', icon: Icon(Icons.stadium_outlined)),
           ],
         ),
       ),
@@ -71,17 +71,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
     final statsAsync = ref.watch(adminStatsProvider);
     return statsAsync.when(
       loading: () => Center(child: CircularProgressIndicator(color: AppTheme.neonBlue)),
-      error: (e, st) => Center(child: Text('Ø®Ø·Ø£: $e', style: const TextStyle(color: Colors.white))),
+      error: (e, st) => Center(child: Text('خطأ: $e', style: const TextStyle(color: Colors.white))),
       data: (stats) {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(adminStatsProvider.future),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _buildStatCard('Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†', stats['totalUsers'].toString(), Icons.people, Colors.blue),
-              _buildStatCard('Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ù„Ø§Ø¹Ø¨', stats['totalPitches'].toString(), Icons.stadium, Colors.green),
-              _buildStatCard('Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø­Ø¬ÙˆØ²Ø§Øª', stats['totalBookings'].toString(), Icons.calendar_month, Colors.orange),
-              _buildStatCard('Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø£Ø±Ø¨Ø§Ø­', '${stats['totalRevenue']} Ø¬.Ù…', Icons.attach_money, Colors.purple),
+              _buildStatCard('إجمالي المستخدمين', stats['totalUsers'].toString(), Icons.people, Colors.blue),
+              _buildStatCard('إجمالي الملاعب', stats['totalPitches'].toString(), Icons.stadium, Colors.green),
+              _buildStatCard('إجمالي الحجوزات', stats['totalBookings'].toString(), Icons.calendar_month, Colors.orange),
+              _buildStatCard('إجمالي الأرباح', '${stats['totalRevenue'] ?? 0} ج.م', Icons.attach_money, Colors.purple),
             ],
           ),
         );
@@ -123,7 +123,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
     final usersAsync = ref.watch(adminUsersProvider);
     return usersAsync.when(
       loading: () => Center(child: CircularProgressIndicator(color: AppTheme.neonBlue)),
-      error: (e, st) => Center(child: Text('Ø®Ø·Ø£: $e', style: const TextStyle(color: Colors.white))),
+      error: (e, st) => Center(child: Text('خطأ: $e', style: const TextStyle(color: Colors.white))),
       data: (users) {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(adminUsersProvider.future),
@@ -138,7 +138,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                 ),
                 title: Text(u['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 subtitle: Text('${u['phone']} - ${u['role']}', style: const TextStyle(color: Colors.white70)),
-                trailing: Text('${u['points']} Ù†Ù‚Ø·Ø©', style: TextStyle(color: AppTheme.neonOrange)),
+                trailing: Text('${u['points']} نقطة', style: TextStyle(color: AppTheme.neonOrange)),
+                onTap: () {
+                  _showUserDetails(context, u);
+                },
               );
             },
           ),
@@ -146,12 +149,69 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
       },
     );
   }
+  
+  void _showUserDetails(BuildContext context, dynamic u) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceDark,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: AppTheme.neonBlue.withOpacity(0.2),
+                child: Text(u['name'][0].toUpperCase(), style: TextStyle(color: AppTheme.neonBlue, fontSize: 32, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 16),
+              Text(u['name'], style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(u['phone'], style: const TextStyle(color: Colors.white70, fontSize: 18)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildUserInfoBadge('الدور', u['role'], Icons.admin_panel_settings),
+                  _buildUserInfoBadge('النقاط', '${u['points']}', Icons.stars),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.neonBlue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('إغلاق', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildUserInfoBadge(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: AppTheme.neonOrange, size: 28),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
 
   Widget _buildPitchesTab() {
     final pitchesAsync = ref.watch(adminPitchesProvider);
     return pitchesAsync.when(
       loading: () => Center(child: CircularProgressIndicator(color: AppTheme.neonBlue)),
-      error: (e, st) => Center(child: Text('Ø®Ø·Ø£: $e', style: const TextStyle(color: Colors.white))),
+      error: (e, st) => Center(child: Text('خطأ: $e', style: const TextStyle(color: Colors.white))),
       data: (pitches) {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(adminPitchesProvider.future),
@@ -182,8 +242,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                     : null,
                 ),
                 title: Text(p['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                subtitle: Text('Ø§Ù„Ø³Ø¹Ø±: ${p['pricePerHour']} Ø¬.Ù…', style: const TextStyle(color: Colors.white70)),
+                subtitle: Text('السعر: ${p['pricePerHour']} ج.م', style: const TextStyle(color: Colors.white70)),
                 trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                onTap: () {
+                  context.push('/pitch/${p['id']}');
+                },
               );
             },
           ),
