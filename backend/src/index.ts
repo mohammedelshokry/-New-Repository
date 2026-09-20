@@ -257,7 +257,8 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response) => {
 app.get('/api/bookings', requireAuth, async (req: Request, res: Response) => {
   const bookings = await prisma.booking.findMany({
     where: req.user!.role === 'OWNER' ? { pitch: { ownerId: req.user!.userId } } : { userId: req.user!.userId },
-    include: { pitch: true, user: { select: { name: true, phone: true } } }
+    include: { pitch: true, user: { select: { name: true, phone: true } } },
+    orderBy: { createdAt: 'desc' }
   });
   res.json(bookings);
 });

@@ -82,6 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
         destinations: [
           NavigationDestination(icon: const Icon(Icons.stadium_outlined), selectedIcon: const Icon(Icons.stadium).animate().scale(duration: 300.ms, curve: Curves.easeOutBack), label: 'الملاعب'),
+          NavigationDestination(icon: const Icon(Icons.map_outlined), selectedIcon: const Icon(Icons.map).animate().scale(duration: 300.ms, curve: Curves.easeOutBack), label: 'الخريطة'),
           NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups).animate().scale(duration: 300.ms, curve: Curves.easeOutBack), label: 'مطلوب لاعب'),
           NavigationDestination(icon: const Icon(Icons.emoji_events_outlined), selectedIcon: const Icon(Icons.emoji_events).animate().scale(duration: 300.ms, curve: Curves.easeOutBack), label: 'الترتيب'),
           NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person).animate().scale(duration: 300.ms, curve: Curves.easeOutBack), label: 'حسابي'),

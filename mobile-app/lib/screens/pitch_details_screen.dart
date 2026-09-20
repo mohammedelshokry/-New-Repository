@@ -2,6 +2,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
@@ -491,15 +492,90 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
           ref.read(currentUserProvider.notifier).state = updatedUser;
         }
 
-        showDialog(
+        showGeneralDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('تم الحجز بنجاح!'),
-            content: Text('إجمالي المبلغ: $totalPrice ج.م\n(يتم الدفع كاش عند الوصول)'),
-            actions: [
-              TextButton(onPressed: () { Navigator.pop(ctx); Navigator.pop(context); }, child: const Text('حسناً'))
-            ],
-          ),
+          barrierDismissible: true,
+          barrierLabel: 'Dismiss',
+          transitionDuration: const Duration(milliseconds: 400),
+          pageBuilder: (context, anim1, anim2) {
+            return Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceLighter,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [BoxShadow(color: AppTheme.neonBlue.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: 5)],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_outline, color: AppTheme.neonBlue, size: 80)
+                          .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                          .scale(duration: 1.seconds, begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
+                      const SizedBox(height: 16),
+                      const Text('تم الحجز بنجاح! 🎉', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                      const SizedBox(height: 8),
+                      Text('لقد قمت بحجز ${pitch['name']} بنجاح.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.neonBlue.withValues(alpha: 0.5)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('إجمالي التكلفة:', style: TextStyle(color: Colors.white70)),
+                                Text('$totalPrice ج.م', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold, fontSize: 18)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('طريقة الدفع:', style: TextStyle(color: Colors.white70)),
+                                Text('الدفع نقدًا بالملعب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.neonBlue,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('ممتاز!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+          transitionBuilder: (context, anim1, anim2, child) {
+            return Transform.scale(
+              scale: Curves.easeOutBack.transform(anim1.value),
+              child: FadeTransition(opacity: anim1, child: child),
+            );
+          },
         );
       }
     } catch (e) {
