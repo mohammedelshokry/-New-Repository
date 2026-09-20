@@ -336,36 +336,210 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: AppTheme.surfaceLighter,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Column(
-              children: [
-                _buildSettingsTile(Icons.person_outline, 'تعديل الملف الشخصي', () {
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قريباً: تعديل الملف')));
-                }),
-                _buildDivider(),
-                _buildSettingsTile(Icons.credit_card, 'طرق الدفع', () {
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قريباً: طرق الدفع')));
-                }),
-                _buildDivider(),
-                _buildSettingsTile(Icons.settings_outlined, 'إعدادات التطبيق', () {
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قريباً: الإعدادات')));
-                }),
-                _buildDivider(),
-                _buildSettingsTile(Icons.help_outline, 'المساعدة والدعم', () {}),
-                _buildDivider(),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.redAccent),
-                  title: const Text('تسجيل خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                  onTap: () {
-                    ref.read(currentUserProvider.notifier).state = null;
-                    context.go('/');
-                  },
-                ),
-              ],
-            ),
+                          child: Column(
+                children: [
+                  _buildSettingsTile(Icons.person_outline, 'تعديل الملف الشخصي', () => _showEditProfileSheet(context, user)),
+                  _buildDivider(),
+                  _buildSettingsTile(Icons.credit_card, 'طرق الدفع', () => _showPaymentMethodsSheet(context)),
+                  _buildDivider(),
+                  _buildSettingsTile(Icons.settings_outlined, 'إعدادات التطبيق', () => _showAppSettingsSheet(context)),
+                  _buildDivider(),
+                  _buildSettingsTile(Icons.help_outline, 'المساعدة والدعم', () => _showSupportSheet(context)),
+                  _buildDivider(),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.redAccent),
+                    title: const Text('تسجيل خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onTap: () {
+                      ref.read(currentUserProvider.notifier).state = null;
+                      context.go('/');
+                    },
+                  ),
+                ],
+              ),
           ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
           const SizedBox(height: 30),
         ],
+      ),
+    );
+  }
+
+
+  void _showEditProfileSheet(BuildContext context, Map<String, dynamic> user) {
+    final nameCtrl = TextEditingController(text: user['name']);
+    final phoneCtrl = TextEditingController(text: user['phone']);
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceLighter,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('تعديل الملف الشخصي', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(labelText: 'الاسم', labelStyle: const TextStyle(color: Colors.white70), filled: true, fillColor: AppTheme.backgroundDark, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(labelText: 'رقم الهاتف', hintText: '01XXXXXXXXX', hintStyle: const TextStyle(color: Colors.white38), labelStyle: const TextStyle(color: Colors.white70), filled: true, fillColor: AppTheme.backgroundDark, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  onPressed: isLoading ? null : () async {
+                    setModalState(() => isLoading = true);
+                    try {
+                      final dio = ref.read(dioProvider);
+                      final res = await dio.put('/users/me', data: {
+                        'name': nameCtrl.text,
+                        'phone': phoneCtrl.text,
+                      });
+                      ref.read(currentUserProvider.notifier).state = res.data;
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التعديلات بنجاح!')));
+                      }
+                    } catch (e) {
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء التحديث: $e')));
+                    } finally {
+                      setModalState(() => isLoading = false);
+                    }
+                  },
+                  child: isLoading 
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                      : const Text('حفظ التغييرات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  void _showPaymentMethodsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceLighter,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('طرق الدفع', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppTheme.backgroundDark, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.neonOrange.withValues(alpha: 0.3))),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_balance_wallet, color: AppTheme.neonOrange),
+                  const SizedBox(width: 16),
+                  const Expanded(child: Text('المحفظة (كاش)', style: TextStyle(color: Colors.white, fontSize: 16))),
+                  Text('0 ج.م', style: TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.backgroundDark, foregroundColor: AppTheme.neonBlue, padding: const EdgeInsets.symmetric(vertical: 16), side: const BorderSide(color: AppTheme.neonBlue), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              onPressed: () {},
+              icon: const Icon(Icons.add_card),
+              label: const Text('إضافة بطاقة جديدة'),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAppSettingsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceLighter,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('إعدادات التطبيق', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 20),
+            SwitchListTile(
+              title: const Text('الإشعارات', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('تفعيل تنبيهات المباريات والحجوزات', style: TextStyle(color: Colors.white54)),
+              value: true,
+              activeColor: AppTheme.neonBlue,
+              onChanged: (v) {},
+            ),
+            SwitchListTile(
+              title: const Text('الوضع المظلم', style: TextStyle(color: Colors.white)),
+              value: true,
+              activeColor: AppTheme.neonBlue,
+              onChanged: (v) {},
+            ),
+            ListTile(
+              title: const Text('اللغة', style: TextStyle(color: Colors.white)),
+              trailing: const Text('العربية', style: TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold)),
+              onTap: () {},
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSupportSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceLighter,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('المساعدة والدعم', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline, color: AppTheme.neonBlue),
+              title: const Text('تواصل معنا (شات)', style: TextStyle(color: Colors.white)),
+              onTap: () {},
+            ),
+            ListTile(
+              leading: const Icon(Icons.email_outlined, color: AppTheme.neonBlue),
+              title: const Text('البريد الإلكتروني', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('support@spotaia.com', style: TextStyle(color: Colors.white54)),
+              onTap: () {},
+            ),
+            ListTile(
+              leading: const Icon(Icons.question_answer_outlined, color: AppTheme.neonBlue),
+              title: const Text('الأسئلة الشائعة', style: TextStyle(color: Colors.white)),
+              onTap: () {},
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -490,6 +664,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
+            onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'ابحث عن ملعب...',
@@ -553,9 +728,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           error: (err, stack) => Center(child: Text('خطأ: $err', style: const TextStyle(color: Colors.white))),
           data: (pitches) {
-            final filteredPitches = _selectedCategory == 'All' 
-                ? pitches 
-                : pitches.where((p) => p['category'] == _selectedCategory).toList();
+            final filteredPitches = pitches.where((p) {
+              final matchesCategory = _selectedCategory == 'All' || p['category'] == _selectedCategory;
+              final name = (p['name'] ?? '').toString().toLowerCase();
+              final type = (p['type'] ?? '').toString().toLowerCase();
+              final matchesSearch = _searchQuery.isEmpty || name.contains(_searchQuery) || type.contains(_searchQuery);
+              return matchesCategory && matchesSearch;
+            }).toList();
 
             return Expanded(
               child: ListView.builder(
