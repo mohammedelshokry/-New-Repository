@@ -138,7 +138,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                 ),
                 title: Text(u['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 subtitle: Text('${u['phone']} - ${u['role']}', style: const TextStyle(color: Colors.white70)),
-                trailing: Text('${u['points']} نقطة', style: TextStyle(color: AppTheme.neonOrange)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('${u['points']} نقطة', style: TextStyle(color: AppTheme.neonOrange)),
+                    const SizedBox(width: 8),
+                    if (u['isActive'] == false) const Icon(Icons.block, color: Colors.red, size: 16),
+                  ],
+                ),
                 onTap: () {
                   _showUserDetails(context, u);
                 },
@@ -179,15 +186,43 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                 ],
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.neonBlue,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('إغلاق', style: TextStyle(fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        try {
+                          await ref.read(dioProvider).post('/admin/users/${u['id']}/toggle-ban');
+                          ref.refresh(adminUsersProvider.future);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(u['isActive'] ? 'تم حظر المستخدم' : 'تم فك الحظر')));
+                          }
+                        } catch(e) {}
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: u['isActive'] ? Colors.red : Colors.green,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(u['isActive'] ? 'حظر المستخدم' : 'فك الحظر', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.neonBlue,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('إغلاق', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -243,7 +278,33 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                 ),
                 title: Text(p['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 subtitle: Text('السعر: ${p['pricePerHour']} ج.م', style: const TextStyle(color: Colors.white70)),
-                trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: AppTheme.surfaceDark,
+                        title: const Text('حذف الملعب', style: TextStyle(color: Colors.white)),
+                        content: const Text('هل أنت متأكد أنك تريد حذف هذا الملعب وكل حجوزاته؟', style: TextStyle(color: Colors.white70)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true), 
+                            child: const Text('حذف', style: TextStyle(color: Colors.red))
+                          ),
+                        ],
+                      )
+                    );
+                    if (confirm == true) {
+                      try {
+                        await ref.read(dioProvider).delete('/admin/pitches/${p['id']}');
+                        ref.refresh(adminPitchesProvider.future);
+                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حذف الملعب')));
+                      } catch(e) {}
+                    }
+                  },
+                ),
                 onTap: () {
                   context.push('/pitch/${p['id']}');
                 },

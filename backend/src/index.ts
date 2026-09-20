@@ -46,6 +46,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev-only';
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
+
 declare global {
   namespace Express {
     interface Request {
@@ -718,6 +719,34 @@ app.get('/api/admin/pitches', requireAuth, requireRole(['ADMIN']), async (req: R
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+
+app.delete('/api/admin/pitches/:id', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+  try {
+    // Delete pitch related data first or use cascade in prisma, let's assume cascade is not there
+    await prisma.review.deleteMany({ where: { pitchId: req.params.id } });
+    await prisma.booking.deleteMany({ where: { pitchId: req.params.id } });
+    await prisma.pitch.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/users/:id/toggle-ban', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { isActive: !user.isActive }
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);

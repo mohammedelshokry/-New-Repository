@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
 import 'manage_pitch_screen.dart';
+import 'add_pitch_screen.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -256,7 +257,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppTheme.surfaceDark,
         foregroundColor: Colors.white,
-        onPressed: _showAddPitchDialog,
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPitchScreen())),
         icon: const Icon(Icons.add),
         label: const Text('إضافة ملعب'),
       ),
