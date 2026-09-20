@@ -14,6 +14,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/owner_dashboard_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
 import 'screens/pitch_details_screen.dart';
 
 
@@ -131,7 +132,10 @@ class HomeOrOwnerWrapper extends ConsumerWidget {
     if (user == null) {
       return const AuthScreen();
     }
-    if (user['role'] == 'OWNER' || user['role'] == 'ADMIN') {
+    if (user['role'] == 'ADMIN') {
+      return const AdminDashboardScreen();
+    }
+    if (user['role'] == 'OWNER') {
       return const OwnerDashboardScreen();
     }
     return const HomeScreen();

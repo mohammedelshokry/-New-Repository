@@ -69,3 +69,23 @@ final notificationsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) as
   final res = await dio.get('/notifications');
   return res.data;
 });
+
+
+// Admin Providers
+final adminStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/admin/stats');
+  return response.data;
+});
+
+final adminUsersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/admin/users');
+  return response.data;
+});
+
+final adminPitchesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/admin/pitches');
+  return response.data;
+});

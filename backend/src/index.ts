@@ -686,6 +686,39 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   res.json({ received: true });
 });
 
+
+// --- Admin Dashboard Routes ---
+app.get('/api/admin/stats', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+  try {
+    const totalUsers = await prisma.user.count();
+    const totalPitches = await prisma.pitch.count();
+    const totalBookings = await prisma.booking.count();
+    const bookings = await prisma.booking.findMany({ where: { status: 'CONFIRMED' } });
+    const totalRevenue = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    res.json({ totalUsers, totalPitches, totalBookings, totalRevenue });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/users', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/pitches', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+  try {
+    const pitches = await prisma.pitch.findMany({ include: { owner: true }, orderBy: { createdAt: 'desc' } });
+    res.json(pitches);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
