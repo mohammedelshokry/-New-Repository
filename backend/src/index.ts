@@ -23,6 +23,14 @@ async function awardGamificationPoints(userId: string, pointsToAdd: number) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', { apiVersion: '2025-01-27.acacia' });
 import multer from 'multer';
 import path from 'path';
+import * as admin from 'firebase-admin';
+try {
+  const serviceAccount = require('../../firebase-admin.json');
+  if (!admin.apps.length) {
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  }
+} catch (e) {}
+
 import fs from 'fs';
 
 import { PrismaClient } from '@prisma/client';
@@ -233,7 +241,13 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response) => {
       }
     }
     
-    res.status(201).json(booking);
+    try {
+        const pitchData = await prisma.pitch.findUnique({ where: { id: pitchId }, include: { owner: true } });
+        if (pitchData && pitchData.owner.fcmToken) {
+           await admin.messaging().send({ token: pitchData.owner.fcmToken, notification: { title: 'حجز جديد! ⚽', body: `تم حجز ملعبك ${pitchData.name} بتاريخ ${new Date(startTime).toLocaleDateString()}` } });
+        }
+      } catch (e) {}
+      res.status(201).json(booking);
   } catch (e: any) {
     res.status(400).json({ error: e.message });
   }

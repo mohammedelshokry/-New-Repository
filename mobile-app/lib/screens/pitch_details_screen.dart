@@ -480,7 +480,8 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
       
       if (context.mounted) {
         // Simple client-side level update prediction
-        final currentUser = ref.read(currentUserProvider);
+        ref.invalidate(myBookingsProvider);
+          final currentUser = ref.read(currentUserProvider);
         if (currentUser != null) {
           Map<String, dynamic> updatedUser = Map.from(currentUser);
           updatedUser['points'] = (updatedUser['points'] ?? 0) + 50;
