@@ -473,8 +473,8 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
       final dio = ref.read(dioProvider);
       final res = await dio.post('/bookings', data: {
         'pitchId': widget.pitchId,
-        'startTime': startDateTime.toIso8601String(),
-        'endTime': endDateTime.toIso8601String(),
+        'startTime': startDateTime.toUtc().toIso8601String(),
+        'endTime': endDateTime.toUtc().toIso8601String(),
         'isManual': false,
       });
       

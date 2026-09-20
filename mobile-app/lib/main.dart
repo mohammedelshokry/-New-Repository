@@ -54,19 +54,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/auth',
         builder: (context, state) => const AuthScreen(),
       ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) {
-          final user = ref.watch(currentUserProvider);
-          if (user == null) {
-            return const AuthScreen();
-          }
-          if (user['role'] == 'OWNER' || user['role'] == 'ADMIN') {
-            return const OwnerDashboardScreen();
-          }
-          return const HomeScreen();
-        },
-      ),
+      GoRoute(path: '/home', builder: (context, state) => const HomeOrOwnerWrapper(),),
       GoRoute(
         path: '/pitch/:id',
         pageBuilder: (context, state) {

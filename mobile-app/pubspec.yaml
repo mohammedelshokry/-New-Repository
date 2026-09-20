@@ -27,6 +27,8 @@ dependencies:
   firebase_messaging: ^16.7.0
   share_plus: ^13.3.0
   smooth_page_indicator: ^3.0.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:
