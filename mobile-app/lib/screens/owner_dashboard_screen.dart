@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
 import 'manage_pitch_screen.dart';
@@ -226,10 +227,18 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
             onPressed: () => context.push('/notifications'),
           ),
           IconButton(
-            tooltip: 'تسجيل خروج',
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(currentUserProvider.notifier).state = null,
-          ),
+              tooltip: 'تسجيل خروج',
+              icon: const Icon(Icons.logout),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('jwt_token');
+                ref.read(currentUserProvider.notifier).state = null;
+                // GoRouter will redirect to auth because of main.dart wrapper or redirect logic
+                if (context.mounted) {
+                   context.go('/auth');
+                }
+              },
+            ),
         ],
         bottom: TabBar(
           controller: _tabController,

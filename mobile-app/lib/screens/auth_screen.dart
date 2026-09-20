@@ -182,25 +182,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               children: [
                 // Logo animation and rendering
                 Hero(
-                  tag: 'app_logo',
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.neonBlue.withValues(alpha: 0.2),
-                          blurRadius: 40,
-                          spreadRadius: 10,
-                        )
-                      ]
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset('assets/icon.jpg', height: 120, fit: BoxFit.contain),
+                    tag: 'app_logo',
+                    child: Container(
+                      height: 160,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppTheme.neonBlue.withValues(alpha: 0.3),
+                            Colors.transparent,
+                          ],
+                          radius: 0.6,
+                        ),
+                      ),
+                      child: Image.asset('assets/logo_transparent.png', height: 120, fit: BoxFit.contain),
                     ),
                   ),
-                ),
                 const SizedBox(height: 32),
                 
                 Text(

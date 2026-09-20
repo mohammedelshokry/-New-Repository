@@ -53,20 +53,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(color: const Color(0xFF00E5FF).withValues(alpha: 0.3), blurRadius: 30, spreadRadius: 5)
-                ],
-                image: const DecorationImage(
-                  image: AssetImage('assets/icon.jpg'),
-                  fit: BoxFit.contain,
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF00E5FF).withValues(alpha: 0.3),
+                      Colors.transparent,
+                    ],
+                    radius: 0.6,
+                  ),
                 ),
-              ),
-            ).animate().scale(duration: 800.ms, curve: Curves.easeOutBack).then().shimmer(duration: 1200.ms, color: const Color(0xFF00E5FF)),
+                child: Center(
+                  child: Image.asset('assets/logo_transparent.png', height: 140, fit: BoxFit.contain),
+                ),
+              ).animate().scale(duration: 800.ms, curve: Curves.easeOutBack).then().shimmer(duration: 1200.ms, color: const Color(0xFF00E5FF)),
             const SizedBox(height: 24),
             const Text(
               'SPOTAIA',
