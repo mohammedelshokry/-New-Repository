@@ -109,10 +109,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case 0:
         return _buildPitchesTab();
       case 1:
-        return _buildCommunityTab(context);
+        return const MapScreen();
       case 2:
-        return _buildLeaderboardTab(context);
+        return _buildCommunityTab(context);
       case 3:
+        return _buildLeaderboardTab(context);
+      case 4:
         return _buildProfileTab(context);
       default:
         return const SizedBox.shrink();
