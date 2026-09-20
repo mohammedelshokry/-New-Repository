@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
 import 'manage_pitch_screen.dart';
 import 'add_pitch_screen.dart';
+import 'edit_profile_screen.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});

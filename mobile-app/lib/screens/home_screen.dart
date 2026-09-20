@@ -12,6 +12,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
+import 'add_match_request_screen.dart';
+import 'edit_profile_screen.dart';
+
 
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -69,8 +72,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       floatingActionButton: _selectedIndex == 2
           ? FloatingActionButton.extended(
               onPressed: () {
-                // TODO: Add Match Request Dialog
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سيتم إضافة نافذة الإنشاء قريباً')));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddMatchRequestScreen()));
               },
               backgroundColor: AppTheme.neonBlue,
               foregroundColor: Colors.black,
@@ -371,7 +373,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
                           child: Column(
                 children: [
-                  _buildSettingsTile(Icons.person_outline, 'تعديل الملف الشخصي', () => _showEditProfileSheet(context, user)),
+                  _buildSettingsTile(Icons.person_outline, 'تعديل الملف الشخصي', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
                   _buildDivider(),
                   _buildSettingsTile(Icons.credit_card, 'طرق الدفع', () => _showPaymentMethodsSheet(context)),
                   _buildDivider(),
