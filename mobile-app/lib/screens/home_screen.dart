@@ -660,17 +660,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('نصيب الفرد: ${match['costPerSpot']} ج.م', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold)),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.neonBlue,
-                            foregroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: () {
-                            context.push('/chat/${match['id']}');
-                          },
-                          child: const Text('انضمام / تواصل', style: TextStyle(fontWeight: FontWeight.bold)),
-                        )
+                        Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.neonBlue,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                  onPressed: () {
+                                    context.push('/chat/${match['id']}');
+                                  },
+                                  icon: const Icon(Icons.forum, size: 20),
+                                  label: const Text('انضمام / تواصل', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppTheme.neonBlue),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.share, color: AppTheme.neonBlue),
+                                  onPressed: () {
+                                    final text = '''🔥 ينقصنا لاعبين في مباراة عبر تطبيق Spotaia!
+🏆 المباراة: ${match['title'] ?? 'مباراة حماسية'}
+👤 المطلوب: ${match['missingSpots'] ?? '?'} لاعبين
+💰 التكلفة: ${match['costPerSpot'] ?? '?'} ج.م
+
+حمّل التطبيق الآن وانضم إلينا!''';
+                                    Share.share(text);
+                                  },
+                                ),
+                              )
+                            ],
+                          )
                       ],
                     )
                   ],

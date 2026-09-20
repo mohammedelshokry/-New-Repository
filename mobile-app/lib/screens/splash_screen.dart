@@ -31,8 +31,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!hasSeenOnboarding) {
       context.go('/onboarding');
     } else if (token != null && token.isNotEmpty) {
-      // Basic check, actual validation would be done by an API call in a real app
-      context.go('/home');
+      try {
+        final dio = ref.read(dioProvider);
+        final res = await dio.get('/auth/me');
+        ref.read(currentUserProvider.notifier).state = res.data;
+        context.go('/home');
+      } catch (e) {
+        context.go('/auth');
+      }
     } else {
       context.go('/auth');
     }

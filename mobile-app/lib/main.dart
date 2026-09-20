@@ -30,38 +30,6 @@ void main() {
 final isInitializedProvider = StateProvider<bool>((ref) => false);
 
 
-class SplashScreen extends ConsumerStatefulWidget {
-  const SplashScreen({super.key});
-  @override
-  ConsumerState<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends ConsumerState<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _initAuth();
-  }
-
-  Future<void> _initAuth() async {
-    try {
-      final dio = ref.read(dioProvider);
-      final res = await dio.get('/auth/me');
-      ref.read(currentUserProvider.notifier).state = res.data;
-    } catch (e) {
-      // Ignored, stay logged out
-    } finally {
-      if (mounted) {
-         ref.read(isInitializedProvider.notifier).state = true;
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
-  }
-}
 
 
 final goRouterProvider = Provider<GoRouter>((ref) {
