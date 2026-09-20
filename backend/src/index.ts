@@ -120,13 +120,14 @@ app.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {
 
 app.put('/api/users/me', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { profilePic, name, phone } = req.body;
+    const { profilePic, name, phone, fcmToken } = req.body;
     
     // Only update fields that are provided
     const dataToUpdate: any = {};
     if (profilePic !== undefined) dataToUpdate.profilePic = profilePic;
     if (name !== undefined) dataToUpdate.name = name;
     if (phone !== undefined) dataToUpdate.phone = phone;
+    if (fcmToken !== undefined) dataToUpdate.fcmToken = fcmToken;
 
     const user = await prisma.user.update({
       where: { id: req.user!.userId },
