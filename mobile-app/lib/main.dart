@@ -23,7 +23,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    print('Firebase init error: $e');
+  }
   runApp(const ProviderScope(child: SpotaiaApp()));
 }
 
@@ -125,5 +131,21 @@ class SpotaiaApp extends ConsumerWidget {
       },
       routerConfig: router,
     );
+  }
+}
+
+class HomeOrOwnerWrapper extends ConsumerWidget {
+  const HomeOrOwnerWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    if (user == null) {
+      return const AuthScreen();
+    }
+    if (user['role'] == 'OWNER' || user['role'] == 'ADMIN') {
+      return const OwnerDashboardScreen();
+    }
+    return const HomeScreen();
   }
 }
