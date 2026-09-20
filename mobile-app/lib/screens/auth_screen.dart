@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/api_provider.dart';
+import '../core/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -14,118 +15,150 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool isLogin = true;
-  String selectedRole = 'PLAYER';
-  final nameController = TextEditingController();
-  final phoneController = TextEditingController();
-  final passwordController = TextEditingController();
+  bool isOwner = false;
   bool isLoading = false;
   bool obscurePassword = true;
   String? errorMsg;
 
-  void submit() async {
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
+  final nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    phoneController.dispose();
+    passwordController.dispose();
+    nameController.dispose();
+    super.dispose();
+  }
+
+  String _mapDioError(DioException e) {
+    if (e.type == DioExceptionType.connectionTimeout || 
+        e.type == DioExceptionType.receiveTimeout || 
+        e.type == DioExceptionType.sendTimeout) {
+      return 'انتهى وقت الاتصال بالسيرفر. تأكد من جودة الإنترنت.';
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return 'خطأ في الاتصال بالسيرفر. يرجى التأكد من تشغيل السيرفر أو الاتصال بالشبكة الصحيحة.';
+    }
+    if (e.response != null && e.response?.data != null) {
+      final data = e.response?.data;
+      if (data is Map && data.containsKey('error')) {
+        return data['error'].toString();
+      }
+    }
+    return 'حدث خطأ غير متوقع. حاول مرة أخرى.';
+  }
+
+  Future<void> submit() async {
     final phone = phoneController.text.trim();
     final password = passwordController.text.trim();
     final name = nameController.text.trim();
 
-    if (phone.isEmpty || password.isEmpty) {
-      setState(() => errorMsg = 'الرجاء إدخال رقم الهاتف وكلمة المرور');
-      return;
-    }
-    if (!isLogin && name.isEmpty) {
-      setState(() => errorMsg = 'الرجاء إدخال الاسم');
+    if (phone.isEmpty || password.isEmpty || (!isLogin && name.isEmpty)) {
+      setState(() => errorMsg = 'يرجى ملء جميع الحقول المطلوبة');
       return;
     }
 
-    setState(() { isLoading = true; errorMsg = null; });
-    final dio = ref.read(dioProvider);
+    setState(() {
+      isLoading = true;
+      errorMsg = null;
+    });
 
     try {
+      final dio = ref.read(dioProvider);
+      
       if (isLogin) {
         final res = await dio.post('/auth/login', data: {
           'phone': phone,
           'password': password,
         });
-        await _handleAuthSuccess(res.data['token'], res.data['user']);
+        ref.read(currentUserProvider.notifier).state = res.data['user'];
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', res.data['token']);
       } else {
-        final res = await dio.post('/auth/register', data: {
+        await dio.post('/auth/register', data: {
           'name': name,
           'phone': phone,
           'password': password,
-          'role': selectedRole,
+          'role': isOwner ? 'OWNER' : 'PLAYER'
         });
-        if (res.statusCode == 201) {
-          final loginRes = await dio.post('/auth/login', data: {
-            'phone': phone,
-            'password': password,
-          });
-          await _handleAuthSuccess(loginRes.data['token'], loginRes.data['user']);
-        }
+        // Auto-login after register
+        final res = await dio.post('/auth/login', data: {
+          'phone': phone,
+          'password': password,
+        });
+        ref.read(currentUserProvider.notifier).state = res.data['user'];
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', res.data['token']);
+      }
+      
+      if (mounted) {
+         final user = ref.read(currentUserProvider);
+         if (user?['role'] == 'OWNER' || user?['role'] == 'ADMIN') {
+           context.go('/');
+         } else {
+           context.go('/');
+         }
       }
     } on DioException catch (e) {
       setState(() {
-        errorMsg = e.response?.data?['error']?.toString() ?? 'خطأ في الاتصال بالسيرفر';
+        errorMsg = _mapDioError(e);
       });
     } catch (e) {
-      setState(() => errorMsg = 'خطأ غير متوقع');
+      setState(() => errorMsg = 'حدث خطأ في التطبيق');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
 
-  Future<void> _handleAuthSuccess(String token, Map<String, dynamic> user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('jwt_token', token);
-    ref.read(currentUserProvider.notifier).state = user;
-  }
-
   Widget _buildRoleSelector() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: AppTheme.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Row(
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => selectedRole = 'PLAYER'),
-              child: Container(
+              onTap: () => setState(() => isOwner = false),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: selectedRole == 'PLAYER' ? Colors.green.shade50 : Colors.transparent,
-                  borderRadius: BorderRadius.horizontal(right: const Radius.circular(12)),
-                  border: selectedRole == 'PLAYER' ? Border.all(color: Colors.green, width: 1) : null,
+                  color: !isOwner ? AppTheme.neonBlue.withOpacity(0.15) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: !isOwner ? AppTheme.neonBlue.withOpacity(0.5) : Colors.transparent),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.sports_soccer, color: selectedRole == 'PLAYER' ? const Color(0xFF00E5FF) : Colors.grey),
-                    const SizedBox(width: 8),
-                    Text('لاعب', style: TextStyle(color: selectedRole == 'PLAYER' ? const Color(0xFF00E5FF) : Colors.grey, fontWeight: FontWeight.bold)),
-                  ],
+                child: Center(
+                  child: Text('لاعب', style: TextStyle(
+                    color: !isOwner ? AppTheme.neonBlue : Colors.white70, 
+                    fontWeight: FontWeight.bold, fontSize: 16
+                  )),
                 ),
               ),
             ),
           ),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => selectedRole = 'OWNER'),
-              child: Container(
+              onTap: () => setState(() => isOwner = true),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: selectedRole == 'OWNER' ? Colors.green.shade50 : Colors.transparent,
-                  borderRadius: BorderRadius.horizontal(left: const Radius.circular(12)),
-                  border: selectedRole == 'OWNER' ? Border.all(color: Colors.green, width: 1) : null,
+                  color: isOwner ? AppTheme.neonOrange.withOpacity(0.15) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isOwner ? AppTheme.neonOrange.withOpacity(0.5) : Colors.transparent),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.stadium, color: selectedRole == 'OWNER' ? const Color(0xFF00E5FF) : Colors.grey),
-                    const SizedBox(width: 8),
-                    Text('صاحب ملعب', style: TextStyle(color: selectedRole == 'OWNER' ? const Color(0xFF00E5FF) : Colors.grey, fontWeight: FontWeight.bold)),
-                  ],
+                child: Center(
+                  child: Text('مالك ملعب', style: TextStyle(
+                    color: isOwner ? AppTheme.neonOrange : Colors.white70, 
+                    fontWeight: FontWeight.bold, fontSize: 16
+                  )),
                 ),
               ),
             ),
@@ -138,159 +171,169 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.backgroundDark,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Logo
-                  Center(
-                      child: Hero(
-                        tag: 'app_logo',
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Image.network('/spotaia_logo.jpg', height: 160, width: 160, fit: BoxFit.contain, errorBuilder: (_,__,___) => const SizedBox()),
-                        ),
-                      ),
-                    ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-                    const SizedBox(height: 16),
-                    const Text('Spotaia', textAlign: TextAlign.center, style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: const Color(0xFF00E5FF), letterSpacing: -1)).animate().fade(duration: 800.ms).slideY(begin: 0.3),
-
-                  Text(isLogin ? 'مرحباً بعودتك للملعب!' : 'ابدأ رحلتك الرياضية', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
-                  const SizedBox(height: 40),
-
-                  // Tabs
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(16)),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => {isLogin = true, errorMsg = null}),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: isLogin ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: isLogin ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)] : [],
-                              ),
-                              child: Center(child: Text('تسجيل دخول', style: TextStyle(color: isLogin ? Colors.green.shade700 : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: 16))),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => {isLogin = false, errorMsg = null}),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: !isLogin ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: !isLogin ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)] : [],
-                              ),
-                              child: Center(child: Text('حساب جديد', style: TextStyle(color: !isLogin ? Colors.green.shade700 : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: 16))),
-                            ),
-                          ),
-                        ),
-                      ],
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Logo animation and rendering
+                Hero(
+                  tag: 'app_logo',
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.neonBlue.withValues(alpha: 0.2),
+                          blurRadius: 40,
+                          spreadRadius: 10,
+                        )
+                      ]
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset('assets/icon.jpg', height: 120, fit: BoxFit.contain),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                ),
+                const SizedBox(height: 32),
+                
+                Text(
+                  isLogin ? 'تسجيل الدخول' : 'حساب جديد',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isLogin ? 'مرحباً بعودتك إلى SPOTAIA!' : 'انضم إلى مجتمع الرياضة الأكبر',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.6)),
+                ),
+                const SizedBox(height: 40),
 
-                  // Form Fields
-                  if (!isLogin) ...[
-                    _buildRoleSelector(),
-                    TextField(
-                      controller: nameController,
-                      textDirection: TextDirection.rtl,
-                      decoration: InputDecoration(
-                        labelText: 'الاسم بالكامل',
-                        prefixIcon: const Icon(Icons.person_outline),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: const Color(0xFF00E5FF), width: 2)),
-                        filled: true,
-                        fillColor: const Color(0xFF1A1A1A),
+                // Login/Register Toggle
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceDark, 
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => {isLogin = true, errorMsg = null}),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: isLogin ? AppTheme.surfaceLighter : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text('تسجيل دخول', style: TextStyle(
+                                color: isLogin ? Colors.white : Colors.white54, 
+                                fontWeight: FontWeight.bold, fontSize: 16
+                              )),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => {isLogin = false, errorMsg = null}),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: !isLogin ? AppTheme.surfaceLighter : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text('حساب جديد', style: TextStyle(
+                                color: !isLogin ? Colors.white : Colors.white54, 
+                                fontWeight: FontWeight.bold, fontSize: 16
+                              )),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
 
+                // Form Fields
+                if (!isLogin) ...[
+                  _buildRoleSelector(),
                   TextField(
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    textDirection: TextDirection.ltr,
-                    decoration: InputDecoration(
-                      labelText: 'رقم الهاتف',
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: const Color(0xFF00E5FF), width: 2)),
-                      filled: true,
-                      fillColor: const Color(0xFF1A1A1A),
+                    controller: nameController,
+                    textDirection: TextDirection.rtl,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم الكامل',
+                      prefixIcon: Icon(Icons.person_outline),
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  TextField(
-                    controller: passwordController,
-                    obscureText: obscurePassword,
-                    textDirection: TextDirection.ltr,
-                    decoration: InputDecoration(
-                      labelText: 'كلمة المرور',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                        
-                        onPressed: () => setState(() => obscurePassword = !obscurePassword),
-                      ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color(0xFF333333))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: const Color(0xFF00E5FF), width: 2)),
-                      filled: true,
-                      fillColor: const Color(0xFF1A1A1A),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  if (errorMsg != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 24),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.shade100)),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error_outline, color: Colors.red.shade400),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text(errorMsg!, style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w500))),
-                        ],
-                      ),
-                    ),
-
-                  ElevatedButton(
-                    onPressed: isLoading ? null : submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: isLoading
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                        : Text(isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
                 ],
-              ),
+
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  textDirection: TextDirection.ltr,
+                  decoration: const InputDecoration(
+                    labelText: 'رقم الهاتف',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: passwordController,
+                  obscureText: obscurePassword,
+                  textDirection: TextDirection.ltr,
+                  decoration: InputDecoration(
+                    labelText: 'كلمة المرور',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                if (errorMsg != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.error.withOpacity(0.1), 
+                      borderRadius: BorderRadius.circular(12), 
+                      border: Border.all(color: AppTheme.error.withOpacity(0.3))
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: AppTheme.error),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(errorMsg!, style: TextStyle(color: AppTheme.error, fontWeight: FontWeight.w500))),
+                      ],
+                    ),
+                  ),
+
+                ElevatedButton(
+                  onPressed: isLoading ? null : submit,
+                  child: isLoading
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: AppTheme.backgroundDark, strokeWidth: 2.5))
+                      : Text(isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'),
+                ),
+              ],
             ),
           ),
         ),

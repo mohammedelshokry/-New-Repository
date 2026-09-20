@@ -1,4 +1,12 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
@@ -38,6 +46,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
     String surface = 'Artificial Grass';
     String category = 'Football';
     bool indoor = false;
+    XFile? selectedImage;
+    Uint8List? imageBytes;
 
     showModalBottomSheet(
       context: context,
@@ -164,7 +174,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
     final et = DateTime.parse(b['endTime']).toLocal();
     
     return Card(
-      color: const Color(0xFF1A1A1A),
+      color: AppTheme.surfaceLighter,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -174,8 +184,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('${b['user']['name']} - ${b['pitch']['name']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${st.hour}:00 - ${et.hour}:00', style: const TextStyle(color: Color(0xFF00E5FF))),
-              trailing: Text('${b['ownerAmount']} ج.م', style: const TextStyle(color: Color(0xFFFF9100), fontWeight: FontWeight.bold, fontSize: 16)),
+              subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${st.hour}:00 - ${et.hour}:00', style: const TextStyle(color: AppTheme.neonBlue)),
+              trailing: Text('${b['ownerAmount']} ج.م', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             if (isPending)
               Row(
@@ -187,7 +197,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E5FF), foregroundColor: Colors.black),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black),
                     onPressed: () => _updateBookingStatus(b['id'], 'CONFIRMED'),
                     child: const Text('قبول الحجز', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
@@ -208,7 +218,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
     return Scaffold(
       appBar: AppBar(
         title: Text('لوحة تحكم الملعب - مرحباً ${user?['name'] ?? ''}'),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppTheme.surfaceDark,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -223,8 +233,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFF00E5FF),
-          labelColor: const Color(0xFF00E5FF),
+          indicatorColor: AppTheme.neonBlue,
+          labelColor: AppTheme.neonBlue,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
           unselectedLabelColor: Colors.white70,
@@ -235,7 +245,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppTheme.surfaceDark,
         foregroundColor: Colors.white,
         onPressed: _showAddPitchDialog,
         icon: const Icon(Icons.add),
@@ -288,7 +298,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
                   error: (err, _) => Text('خطأ في التحميل: $err'),
                 ),
               ],
@@ -306,19 +316,19 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (pending.isNotEmpty) ...[
-                    const Text('طلبات قيد الانتظار', style: TextStyle(color: Color(0xFFFF9100), fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text('طلبات قيد الانتظار', style: TextStyle(color: AppTheme.neonOrange, fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
                     ...pending.map((b) => _buildBookingCard(b, isPending: true)),
                     const SizedBox(height: 20),
                   ],
-                  const Text('حجوزات مؤكدة', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('حجوزات مؤكدة', style: TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   if (confirmed.isEmpty) const Text('لا توجد حجوزات مؤكدة', style: TextStyle(color: Colors.grey)),
                   ...confirmed.map((b) => _buildBookingCard(b, isPending: false)),
                 ],
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
             error: (e, st) => Center(child: Text('خطأ: $e', style: const TextStyle(color: Colors.white))),
           ),
         ],

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'providers/api_provider.dart';
+import 'core/theme/app_theme.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/owner_dashboard_screen.dart';
@@ -13,6 +14,43 @@ import 'screens/pitch_details_screen.dart';
 void main() {
   runApp(const ProviderScope(child: SpotaiaApp()));
 }
+
+final isInitializedProvider = StateProvider<bool>((ref) => false);
+
+
+class SplashScreen extends ConsumerStatefulWidget {
+  const SplashScreen({super.key});
+  @override
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _initAuth();
+  }
+
+  Future<void> _initAuth() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/auth/me');
+      ref.read(currentUserProvider.notifier).state = res.data;
+    } catch (e) {
+      // Ignored, stay logged out
+    } finally {
+      if (mounted) {
+         ref.read(isInitializedProvider.notifier).state = true;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+  }
+}
+
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final user = ref.watch(currentUserProvider);
@@ -23,6 +61,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) {
+          final isInitialized = ref.watch(isInitializedProvider);
+          if (!isInitialized) return const SplashScreen();
           if (user == null) {
             return const AuthScreen();
           }
@@ -87,56 +127,7 @@ class SpotaiaApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Spotaia',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.dark(
-          primary: const Color(0xFF00E5FF), // Neon Blue (Football in logo)
-          secondary: const Color(0xFFFF9100), // Neon Orange (Padel in logo)
-          surface: const Color(0xFF121212),
-          background: const Color(0xFF0A0A0A),
-        ),
-        tabBarTheme: const TabBarThemeData(
-          labelColor: Color(0xFF00E5FF),
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Color(0xFF00E5FF),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
-        splashColor: const Color(0xFF00E5FF).withOpacity(0.3),
-        highlightColor: const Color(0xFF00E5FF).withOpacity(0.1),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF121212),
-          elevation: 0,
-          centerTitle: true,
-          titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF121212),
-          indicatorColor: const Color(0xFF00E5FF).withOpacity(0.2),
-          labelTextStyle: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.selected)) {
-              return const TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold);
-            }
-            return const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600);
-          }),
-          iconTheme: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.selected)) {
-              return const IconThemeData(color: Color(0xFF00E5FF));
-            }
-            return const IconThemeData(color: Colors.white70);
-          }),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00E5FF),
-            foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        fontFamily: 'Cairo', // Assuming you have an Arabic font, or default
-      ),
+      theme: AppTheme.darkTheme,
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl, // Default Arabic RTL

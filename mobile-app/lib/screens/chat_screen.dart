@@ -120,14 +120,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isMe ? const Color(0xFF00E5FF).withOpacity(0.2) : const Color(0xFF1A1A1A),
+                      color: isMe ? const Color(0xFF00E5FF).withValues(alpha: 0.2) : const Color(0xFF1A1A1A),
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(16),
                         topRight: const Radius.circular(16),
                         bottomLeft: isMe ? const Radius.circular(0) : const Radius.circular(16),
                         bottomRight: isMe ? const Radius.circular(16) : const Radius.circular(0),
                       ),
-                      border: Border.all(color: isMe ? const Color(0xFF00E5FF).withOpacity(0.5) : Colors.grey.withOpacity(0.3)),
+                      border: Border.all(color: isMe ? const Color(0xFF00E5FF).withValues(alpha: 0.5) : Colors.grey.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: isMe ? CrossAxisAlignment.start : CrossAxisAlignment.end,

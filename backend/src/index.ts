@@ -1,5 +1,30 @@
 ﻿// @ts-nocheck
 import express, { Request, Response, NextFunction } from 'express';
+import Stripe from 'stripe';
+
+
+// Utility to add points and calculate level
+async function awardGamificationPoints(userId: string, pointsToAdd: number) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return;
+  
+  const newPoints = user.points + pointsToAdd;
+  let newLevel = 'BRONZE';
+  if (newPoints >= 5000) newLevel = 'DIAMOND';
+  else if (newPoints >= 1500) newLevel = 'GOLD';
+  else if (newPoints >= 500) newLevel = 'SILVER';
+  
+  await prisma.user.update({
+    where: { id: userId },
+    data: { points: newPoints, level: newLevel, matchesPlayed: user.matchesPlayed + 1 }
+  });
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', { apiVersion: '2025-01-27.acacia' });
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -418,7 +443,234 @@ app.patch('/api/notifications/read-all', requireAuth, async (req: Request, res: 
   }
 });
 
-app.listen(PORT, () => {
+
+// ==========================================
+// PHASE 4: Community & MatchRequest Engine
+// ==========================================
+
+// Get all open match requests
+app.get('/api/matches', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const matches = await prisma.matchRequest.findMany({
+      where: { status: 'OPEN' },
+      include: {
+        creator: {
+          select: { id: true, name: true, level: true, points: true, profilePic: true }
+        }
+      },
+      orderBy: { matchTime: 'asc' }
+    });
+    res.json(matches);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch match requests' });
+  }
+});
+
+// Create a new match request
+app.post('/api/matches', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { title, description, matchTime, missingSpots, costPerSpot } = req.body;
+    const match = await prisma.matchRequest.create({
+      data: {
+        creatorId: req.user!.userId,
+        title,
+        description,
+        matchTime: new Date(matchTime),
+        missingSpots: parseInt(missingSpots),
+        costPerSpot: parseFloat(costPerSpot)
+      }
+    });
+    res.json(match);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create match request' });
+  }
+});
+
+// Get messages for a match (Chat Phase)
+app.get('/api/matches/:id/messages', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const messages = await prisma.message.findMany({
+      where: { matchRequestId: id },
+      include: {
+        sender: {
+          select: { id: true, name: true, profilePic: true, level: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Send a message in a match
+app.post('/api/matches/:id/messages', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    const message = await prisma.message.create({
+      data: {
+        matchRequestId: id,
+        senderId: req.user!.userId,
+        content
+      }
+    });
+    res.json(message);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+
+// ==========================================
+// PHASE 5: Payments & Gamification
+// ==========================================
+
+// 1. Create Checkout Session for a Booking
+
+// Owner Confirm Cash Payment
+app.post('/api/bookings/:id/confirm-cash', requireAuth, requireRole(['OWNER', 'ADMIN']), async (req: Request, res: Response) => {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id }, include: { pitch: true } });
+    if (!booking) return res.status(404).json({ error: 'Not found' });
+    if (booking.pitch.ownerId !== req.user!.userId) return res.status(403).json({ error: 'Unauthorized' });
+    if (booking.paymentStatus === 'PAID') return res.status(400).json({ error: 'Already paid' });
+
+    const updated = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { paymentStatus: 'PAID', status: 'COMPLETED' }
+    });
+
+    // Award points
+    await awardGamificationPoints(booking.userId, 100);
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Player Confirm Attendance
+app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } });
+    if (!booking) return res.status(404).json({ error: 'Not found' });
+    if (booking.userId !== req.user!.userId) return res.status(403).json({ error: 'Unauthorized' });
+
+    const updated = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: 'ATTENDANCE_CONFIRMED' }
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cron job to auto-complete and award points if time passed (Runs every 15 mins)
+setInterval(async () => {
+  try {
+    const now = new Date();
+    // Safety check if Prisma is disconnected due to sleep
+    const passedBookings = await prisma.booking.findMany({
+      where: {
+        endTime: { lt: now },
+        status: { in: ['CONFIRMED', 'ATTENDANCE_CONFIRMED'] },
+        paymentStatus: 'UNPAID'
+      }
+    });
+
+    for (const b of passedBookings) {
+      await prisma.booking.update({
+        where: { id: b.id },
+        data: { status: 'COMPLETED' }
+      });
+      await awardGamificationPoints(b.userId, 100);
+    }
+  } catch (e: any) {
+    console.error('Cron Error safely caught:', e.message || e);
+  }
+}, 15 * 60 * 1000);
+
+app.post('/api/bookings/:id/pay', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { pitch: true }
+    });
+
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.userId !== req.user!.userId) return res.status(403).json({ error: 'Unauthorized' });
+    if (booking.paymentStatus === 'PAID') return res.status(400).json({ error: 'Already paid' });
+
+    // Phase 5: Simulated Stripe Checkout if using dummy key
+    if (process.env.STRIPE_SECRET_KEY === undefined || process.env.STRIPE_SECRET_KEY === 'sk_test_dummy') {
+      // Simulate success for local testing without valid keys
+      await prisma.booking.update({ where: { id: booking.id }, data: { paymentStatus: 'PAID' } });
+      await awardGamificationPoints(booking.userId, 100);
+      return res.json({ url: 'https://spotaia.com/payment/success?session_id=simulated', sessionId: 'simulated' });
+    }
+
+    // Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'egp',
+          product_data: {
+            name: `حجز ملعب: ${booking.pitch.name}`,
+            description: `تاريخ الحجز: ${booking.startTime.toLocaleString()}`
+          },
+          unit_amount: Math.round(booking.price * 100), // Stripe expects cents/piasters
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `https://spotaia.com/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://spotaia.com/payment/cancel`,
+      client_reference_id: booking.id,
+      metadata: { bookingId: booking.id }
+    });
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (error) {
+    console.error('Payment Error:', error);
+    res.status(500).json({ error: 'Failed to initiate payment' });
+  }
+});
+
+// 2. Stripe Webhook to update payment status
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+  const sig = req.headers['stripe-signature'] as string;
+  let event;
+  
+  try {
+    // In production, use your actual webhook secret
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_dummy';
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err: any) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as any;
+    const bookingId = session.metadata?.bookingId;
+    if (bookingId) {
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: { paymentStatus: 'PAID' }
+      });
+      await awardGamificationPoints(updatedBooking.userId, 100);
+    }
+  }
+  res.json({ received: true });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 

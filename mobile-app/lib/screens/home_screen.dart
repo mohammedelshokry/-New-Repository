@@ -1,10 +1,14 @@
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
+
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +19,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
+  String _searchQuery = '';
   String _selectedCategory = 'All';
 
   @override
@@ -23,26 +28,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.sports_soccer, color: Color(0xFF00E5FF)),
-            const SizedBox(width: 8),
-            Text(
-              _selectedIndex == 0 ? 'الملاعب المتاحة' : (_selectedIndex == 1 ? 'مجتمع اللاعبين' : (_selectedIndex == 2 ? 'قائمة المتصدرين' : 'حسابي')),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF121212),
-        elevation: 0.5,
+        title: const Text('Spotaia', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, letterSpacing: 1.2)),
         actions: [
           IconButton(
-            tooltip: 'تسجيل خروج',
-            icon: const Icon(Icons.logout, color: Colors.redAccent),
-            onPressed: () => ref.read(currentUserProvider.notifier).state = null,
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () => context.push('/notifications'),
           ),
         ],
       ),
+      floatingActionButton: _selectedIndex == 1
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                // TODO: Add Match Request Dialog
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سيتم إضافة نافذة الإنشاء قريباً')));
+              },
+              backgroundColor: AppTheme.neonBlue,
+              foregroundColor: Colors.black,
+              icon: const Icon(Icons.add),
+              label: const Text('طلب جديد', style: TextStyle(fontWeight: FontWeight.bold)),
+            ).animate().scale(duration: 400.ms)
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
@@ -64,514 +69,576 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           );
         },
-        child: _selectedIndex == 0
-            ? KeyedSubtree(key: const ValueKey(0), child: _buildPitchesTab())
-            : (_selectedIndex == 1 
-                ? KeyedSubtree(key: const ValueKey(1), child: _buildMatchesTab()) 
-                : (_selectedIndex == 2 
-                    ? KeyedSubtree(key: const ValueKey(2), child: _buildLeaderboardTab()) 
-                    : KeyedSubtree(key: const ValueKey(3), child: _buildProfileTab(context, ref, user)))),
+        child: _buildBody(context),
       ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildPitchesTab();
+      case 1:
+        return _buildCommunityTab(context);
+      case 2:
+        return _buildLeaderboardTab(context);
+      case 3:
+        return _buildProfileTab(context);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildLeaderboardTab(BuildContext context) {
+    final leaderboardAsync = ref.watch(leaderboardProvider);
+
+    return leaderboardAsync.when(
+      loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
+      error: (err, stack) => Center(child: Text('خطأ: $err', style: const TextStyle(color: Colors.white))),
+      data: (users) {
+        if (users.isEmpty) return const Center(child: Text('لا يوجد تصنيف حالياً', style: TextStyle(color: Colors.white)));
+        
+        return Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('توب 10 لاعبين - لوحة الشرف 🏆', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: users.length > 10 ? 10 : users.length,
+                itemBuilder: (context, index) {
+                  final user = users[index];
+                  final isTop3 = index < 3;
+                  Color rankColor = Colors.grey;
+                  if (index == 0) rankColor = const Color(0xFFFFD700); // Gold
+                  else if (index == 1) rankColor = const Color(0xFFC0C0C0); // Silver
+                  else if (index == 2) rankColor = const Color(0xFFCD7F32); // Bronze
+                  
+                  return Card(
+                    clipBehavior: Clip.antiAlias,
+                    color: AppTheme.surfaceLighter,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: isTop3 ? BorderSide(color: rankColor.withValues(alpha: 0.5), width: 2) : BorderSide.none,
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: CircleAvatar(
+                        backgroundColor: rankColor.withValues(alpha: 0.2),
+                        child: Text('#${index + 1}', style: TextStyle(color: rankColor, fontWeight: FontWeight.bold, fontSize: 18)),
+                      ),
+                      title: Text(user['name'] ?? 'لاعب', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                      subtitle: Text('${user['level']} - ${user['points']} نقطة', style: const TextStyle(color: AppTheme.neonBlue)),
+                      trailing: user['profilePic'] != null
+                          ? CircleAvatar(backgroundImage: NetworkImage(user['profilePic']))
+                          : const CircleAvatar(backgroundColor: Colors.black, child: Icon(Icons.person, color: Colors.white)),
+                    ),
+                  ).animate().fade(duration: 400.ms, delay: (50 * index).ms).slideX(begin: 0.2);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileTab(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    final bookingsAsync = ref.watch(myBookingsProvider);
+
+    if (user == null) return const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0));
+
+    Color badgeColor = Colors.grey;
+    if (user['level'] == 'DIAMOND') badgeColor = const Color(0xFFE0F7FA);
+    else if (user['level'] == 'GOLD') badgeColor = const Color(0xFFFFD700);
+    else if (user['level'] == 'SILVER') badgeColor = const Color(0xFFC0C0C0);
+    else if (user['level'] == 'BRONZE') badgeColor = const Color(0xFFCD7F32);
+    
+    int points = user['points'] ?? 0;
+    int nextLevelPoints = 500;
+    if (points >= 500) nextLevelPoints = 1500;
+    if (points >= 1500) nextLevelPoints = 5000;
+    if (points >= 5000) nextLevelPoints = 5000;
+    double progress = (points / nextLevelPoints).clamp(0.0, 1.0);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. GAMIFICATION & USER INFO HEADER
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.surfaceLighter, badgeColor.withValues(alpha: 0.15)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: badgeColor.withValues(alpha: 0.3), width: 1.5),
+            ),
+            child: Row(
+              children: [
+                Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: badgeColor.withValues(alpha: 0.2),
+                      backgroundImage: user['profilePic'] != null ? NetworkImage(user['profilePic']) : null,
+                      child: user['profilePic'] == null ? Icon(Icons.person, size: 40, color: badgeColor) : null,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: AppTheme.surfaceLighter, shape: BoxShape.circle),
+                      child: Icon(Icons.military_tech, color: badgeColor, size: 20),
+                    )
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(user['name'] ?? '', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Text('${user['level']} - $points نقطة', style: TextStyle(fontSize: 14, color: badgeColor, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.black,
+                        color: badgeColor,
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('$points / $nextLevelPoints للمستوى التالي', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fade(duration: 400.ms).slideY(begin: -0.1),
+
+          const SizedBox(height: 24),
+          
+          // 2. UPCOMING BOOKINGS SECTION
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('حجوزاتي', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              TextButton(onPressed: () {}, child: const Text('عرض الكل', style: TextStyle(color: AppTheme.neonBlue))),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          bookingsAsync.when(
+            loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
+            error: (err, stack) => Text('خطأ: $err', style: const TextStyle(color: Colors.red)),
+            data: (bookings) {
+              if (bookings.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: AppTheme.surfaceLighter, borderRadius: BorderRadius.circular(16)),
+                  child: const Center(child: Text('لا توجد حجوزات. ابدأ اللعب الآن!', style: TextStyle(color: Colors.grey))),
+                );
+              }
+              // Show only up to 3 recent bookings in profile
+              final recentBookings = bookings.take(3).toList();
+              return Column(
+                children: recentBookings.map((booking) {
+                  final pitch = booking['pitch'] ?? {};
+                  final isUnpaid = booking['paymentStatus'] == 'UNPAID';
+                  final status = booking['status'];
+
+                  Color statusColor = AppTheme.neonBlue; // COMPLETED / PAID
+                  String statusText = 'مكتمل';
+                  bool showConfirmBtn = false;
+
+                  if (status == 'REJECTED') {
+                    statusColor = Colors.red;
+                    statusText = 'مرفوض من المالك';
+                  } else if (status == 'PENDING') {
+                    statusColor = Colors.amber;
+                    statusText = 'بانتظار قبول المالك';
+                  } else if (status == 'CONFIRMED') {
+                    statusColor = AppTheme.neonOrange;
+                    statusText = 'تم القبول (بانتظار حضورك)';
+                    showConfirmBtn = true;
+                  } else if (status == 'ATTENDANCE_CONFIRMED') {
+                    statusColor = Colors.greenAccent;
+                    statusText = 'تم تأكيد الحضور (الدفع كاش)';
+                  }
+
+                  return Card(
+                    clipBehavior: Clip.antiAlias,
+                    color: AppTheme.surfaceLighter,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: statusColor.withValues(alpha: 0.3))),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                        child: Icon(Icons.sports_soccer, color: statusColor),
+                      ),
+                      title: Text(pitch['name'] ?? 'ملعب', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                              booking['startTime'] != null 
+                                ? "${DateTime.parse(booking['startTime']).toLocal().year}-${DateTime.parse(booking['startTime']).toLocal().month.toString().padLeft(2, '0')}-${DateTime.parse(booking['startTime']).toLocal().day.toString().padLeft(2, '0')} ${DateTime.parse(booking['startTime']).toLocal().hour.toString().padLeft(2, '0')}:00" 
+                                : '', 
+                              style: const TextStyle(color: Colors.white70, fontSize: 12)
+                            ),
+                          Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                        ],
+                      ),
+                      trailing: showConfirmBtn
+                        ? ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonOrange, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 16)),
+                            onPressed: () async {
+                              try {
+                                final dio = ref.read(dioProvider);
+                                await dio.post('/bookings/${booking['id']}/confirm-attendance');
+                                ref.invalidate(myBookingsProvider);
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تأكيد الحضور! الدفع كاش بالملعب.')));
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ')));
+                              }
+                            },
+                            child: const Text('تأكيد حضوري'),
+                          )
+                        : (status == 'COMPLETED' || status == 'ATTENDANCE_CONFIRMED') 
+                            ? const Icon(Icons.check_circle, color: AppTheme.neonBlue, size: 30)
+                            : null,
+                    ),
+                  ).animate().fade().slideX();
+                }).toList(),
+              );
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          // 3. ACCOUNT SETTINGS & OPTIONS
+          const Text('الإعدادات والحساب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLighter,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                _buildSettingsTile(Icons.person_outline, 'تعديل الملف الشخصي', () {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قريباً: تعديل الملف')));
+                }),
+                _buildDivider(),
+                _buildSettingsTile(Icons.credit_card, 'طرق الدفع', () {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قريباً: طرق الدفع')));
+                }),
+                _buildDivider(),
+                _buildSettingsTile(Icons.settings_outlined, 'إعدادات التطبيق', () {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قريباً: الإعدادات')));
+                }),
+                _buildDivider(),
+                _buildSettingsTile(Icons.help_outline, 'المساعدة والدعم', () {}),
+                _buildDivider(),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.redAccent),
+                  title: const Text('تسجيل خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                  onTap: () {
+                    ref.read(currentUserProvider.notifier).state = null;
+                    context.go('/');
+                  },
+                ),
+              ],
+            ),
+          ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
+          const SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.neonBlue),
+      title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildDivider() {
+    return const Divider(height: 1, color: Color(0xFF2A2A2A), indent: 56);
+  }
+
+  Widget _buildCommunityTab(BuildContext context) {
+    final matchesAsync = ref.watch(matchRequestsProvider);
+
+    return matchesAsync.when(
+      loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
+      error: (err, stack) => Center(child: Text('خطأ: $err', style: const TextStyle(color: Colors.white))),
+      data: (matches) {
+        if (matches.isEmpty) {
+          return const Center(child: Text('لا توجد طلبات لاعبين حالياً. كن أول من يطلب!', style: TextStyle(color: Colors.grey)));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: matches.length,
+          itemBuilder: (context, index) {
+            final match = matches[index];
+            final creator = match['creator'] ?? {};
+            
+            // Gamification badge color logic
+            Color badgeColor = Colors.grey;
+            if (creator['level'] == 'DIAMOND') badgeColor = const Color(0xFFE0F7FA);
+            else if (creator['level'] == 'GOLD') badgeColor = const Color(0xFFFFD700);
+            else if (creator['level'] == 'SILVER') badgeColor = const Color(0xFFC0C0C0);
+            else if (creator['level'] == 'BRONZE') badgeColor = const Color(0xFFCD7F32);
+
+            return Card(
+                    clipBehavior: Clip.antiAlias,
+              margin: const EdgeInsets.only(bottom: 16.0),
+              color: AppTheme.surfaceLighter,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: creator['profilePic'] != null ? NetworkImage(creator['profilePic']) : null,
+                          backgroundColor: badgeColor,
+                          child: creator['profilePic'] == null ? const Icon(Icons.person, color: Colors.black) : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(creator['name'] ?? 'لاعب', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                              Row(
+                                children: [
+                                  Icon(Icons.military_tech, size: 16, color: badgeColor),
+                                  Text('${creator['level']} • ${creator['points']} نقطة', style: TextStyle(color: badgeColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.neonBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text('مطلوب ${match['missingSpots']}', style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold)),
+                        )
+                      ],
+                    ),
+                    const Divider(color: Color(0xFF333333), height: 24),
+                    Text(match['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(match['description'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('نصيب الفرد: ${match['costPerSpot']} ج.م', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold)),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.neonBlue,
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            context.push('/chat/${match['id']}');
+                          },
+                          child: const Text('انضمام / تواصل', style: TextStyle(fontWeight: FontWeight.bold)),
+                        )
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ).animate().fade(duration: 400.ms, delay: (100 * index).ms).slideY(begin: 0.2);
+          },
+        );
+      },
     );
   }
 
   Widget _buildPitchesTab() {
     final pitchesAsync = ref.watch(pitchesProvider);
 
-    return RefreshIndicator(
-      onRefresh: () async => ref.refresh(pitchesProvider),
-      child: pitchesAsync.when(
-        loading: () => ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: 4,
-            itemBuilder: (context, index) => Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: Shimmer.fromColors(
-                baseColor: Colors.grey.shade900,
-                highlightColor: Colors.grey.shade800,
+    return Column(
+      children: [
+        // Search Bar
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'ابحث عن ملعب...',
+              hintStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.search, color: Colors.white70),
+              filled: true,
+              fillColor: AppTheme.surfaceLighter,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ).animate().fade(duration: 400.ms).slideY(begin: -0.2),
+
+        // Categories
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: ['All', 'Football', 'Padel', 'PlayStation'].map((cat) {
+              final isSelected = _selectedCategory == cat;
+              final label = cat == 'All' ? 'الكل' : (cat == 'Football' ? 'ملاعب قدم' : (cat == 'Padel' ? 'بادل' : 'بلايستيشن'));
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(label),
+                  selected: isSelected,
+                  onSelected: (val) {
+                    if (val) setState(() => _selectedCategory = cat);
+                  },
+                  selectedColor: AppTheme.neonBlue.withValues(alpha: 0.2),
+                  backgroundColor: AppTheme.surfaceLighter,
+                  labelStyle: TextStyle(color: isSelected ? AppTheme.neonBlue : Colors.white70, fontWeight: FontWeight.bold),
+                  showCheckmark: false,
+                  side: BorderSide(color: isSelected ? AppTheme.neonBlue : Colors.transparent),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+              );
+            }).toList(),
+          ),
+        ).animate().fade(duration: 400.ms, delay: 100.ms).slideX(begin: 0.1),
+
+        // Pitches List
+        pitchesAsync.when(
+          loading: () => Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: 3,
+              itemBuilder: (_, __) => Shimmer.fromColors(
+                baseColor: AppTheme.surfaceLighter,
+                highlightColor: const Color(0xFF333333),
                 child: Container(
-                  height: 280,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                  height: 250,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
           ),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.cloud_off, size: 50, color: Colors.grey),
-              const SizedBox(height: 12),
-              Text('تعذر الاتصال بالسيرفر: $err', textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text('إعادة المحاولة'),
-                onPressed: () => ref.refresh(pitchesProvider),
-              ),
-            ],
-          ),
-        ),
-        data: (pitches) {
-          final filteredPitches = _selectedCategory == 'All' 
-              ? pitches 
-              : pitches.where((p) => p['category'] == _selectedCategory).toList();
-              
-          return Column(
-            children: [
-              SizedBox(
-                height: 50,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: ['All', 'Football', 'Padel', 'PlayStation'].map((cat) {
-                    final isSelected = _selectedCategory == cat;
-                    final label = cat == 'All' ? 'الكل' : (cat == 'Football' ? 'ملاعب قدم' : (cat == 'Padel' ? 'بادل' : 'بلايستيشن'));
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(label),
-                        selected: isSelected,
-                        onSelected: (val) {
-                          if (val) setState(() => _selectedCategory = cat);
-                        },
-                        selectedColor: const Color(0xFF00E5FF).withOpacity(0.2),
-                        labelStyle: TextStyle(color: isSelected ? const Color(0xFF00E5FF) : Colors.white),
-                        showCheckmark: false,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(12.0),
-                  itemCount: filteredPitches.length,
-                  itemBuilder: (context, index) {
-                    final pitch = filteredPitches[index];
-                    final images = pitch['images'] as List? ?? [];
-                    final imgUrl = images.isNotEmpty ? images[0] : '';
+          error: (err, stack) => Center(child: Text('خطأ: $err', style: const TextStyle(color: Colors.white))),
+          data: (pitches) {
+            final filteredPitches = _selectedCategory == 'All' 
+                ? pitches 
+                : pitches.where((p) => p['category'] == _selectedCategory).toList();
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16.0),
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 2,
-                      child: InkWell(
-                        onTap: () => context.push('/pitch/${pitch['id']}'),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Hero(
-                              tag: 'pitch_image_',
-                              child: Image.network(
-                              imgUrl,
+            return Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12.0),
+                itemCount: filteredPitches.length,
+                itemBuilder: (context, index) {
+                  final pitch = filteredPitches[index];
+                  final images = pitch['images'] as List? ?? [];
+                  final imgUrl = images.isNotEmpty ? images[0] : '';
+                  
+                  // Mocking dynamic distance based on ID length for demonstration of distance metric
+                  final distanceKm = ((pitch['name'].toString().length % 5) + 1.2).toStringAsFixed(1);
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16.0),
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 2,
+                    child: InkWell(
+                      onTap: () => context.push('/pitch/${pitch['id']}'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Hero(
+                            tag: 'pitch_image_${pitch['id']}',
+                            child: CachedNetworkImage(
+                              imageUrl: imgUrl,
                               height: 180,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
+                              placeholder: (context, url) => Shimmer.fromColors(
+                                baseColor: AppTheme.surfaceLighter,
+                                highlightColor: const Color(0xFF333333),
+                                child: Container(color: Colors.black, height: 180),
+                              ),
+                              errorWidget: (context, url, error) => Container(
                                 height: 180,
                                 color: Colors.grey.shade900,
                                 child: const Icon(Icons.sports_soccer, size: 50, color: Colors.grey),
                               ),
                             ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(14.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(child: Text(pitch['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                      Text('${pitch['pricePerHour']} ج.م/ساعة', style: const TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontSize: 16)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(pitch['location'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.stars, size: 16, color: Colors.amber),
-                                      const SizedBox(width: 4),
-                                      Text('+ نقطة لكل ساعة', style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 6,
-                                    children: [
-                                      Chip(
-                                        label: Text(pitch['surface'] ?? '', style: const TextStyle(fontSize: 11)),
-                                        padding: EdgeInsets.zero,
-                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      if (pitch['indoor'] == true)
-                                        Chip(
-                                          label: const Text('صالة مغطاة', style: TextStyle(fontSize: 11)),
-                                          backgroundColor: Colors.blue.withOpacity(0.1),
-                                          padding: EdgeInsets.zero,
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildMatchesTab() {
-    final matchesAsync = ref.watch(matchRequestsProvider);
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateMatchDialog(),
-        backgroundColor: const Color(0xFF00E5FF),
-        icon: const Icon(Icons.add, color: Colors.black),
-        label: const Text('طلب لاعبين', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.refresh(matchRequestsProvider),
-        child: matchesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('خطأ: $err')),
-          data: (matches) => matches.isEmpty
-              ? const Center(child: Text('لا توجد طلبات لاعبين حالياً'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: matches.length,
-                  itemBuilder: (context, index) {
-                    final m = matches[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(m['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(color: const Color(0xFFFF9100).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                                  child: Text('ناقص ${m['missingSpots']} لاعبين', style: const TextStyle(color: Color(0xFFFF9100), fontWeight: FontWeight.bold, fontSize: 12)),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(m['description'] ?? '', style: const TextStyle(color: Colors.grey)),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('حصة الفرد: ${m['costPerSpot']} ج.م', style: const TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold)),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF00E5FF),
-                                    foregroundColor: Colors.black,
-                                  ),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('تم إرسال طلب الانضمام')),
-                                    );
-                                  },
-                                  child: const Text('انضمام'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLeaderboardTab() {
-    final leaderboardAsync = ref.watch(leaderboardProvider);
-
-    return RefreshIndicator(
-      onRefresh: () async => ref.refresh(leaderboardProvider),
-      child: leaderboardAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('خطأ: $err')),
-        data: (users) => users.isEmpty
-            ? const Center(child: Text('لا يوجد لاعبين حتى الآن'))
-            : ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: users.length,
-                itemBuilder: (context, index) {
-                  final u = users[index];
-                  final bool isTop3 = index < 3;
-                  Color rankColor = Colors.grey;
-                  if (index == 0) rankColor = const Color(0xFFFFD700); // Gold
-                  if (index == 1) rankColor = const Color(0xFFC0C0C0); // Silver
-                  if (index == 2) rankColor = const Color(0xFFCD7F32); // Bronze
-                  
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: isTop3 ? 4 : 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: isTop3 ? BorderSide(color: rankColor.withOpacity(0.5), width: 1.5) : BorderSide.none,
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      leading: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('#${index + 1}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isTop3 ? rankColor : Colors.grey)),
-                          const SizedBox(width: 12),
-                          CircleAvatar(
-                            backgroundColor: isTop3 ? rankColor.withOpacity(0.2) : const Color(0xFF00E5FF).withOpacity(0.1),
-                            backgroundImage: u['profilePic'] != null && u['profilePic'] != '' ? NetworkImage(u['profilePic']) : null,
-                            child: (u['profilePic'] == null || u['profilePic'] == '') ? Icon(Icons.person, color: isTop3 ? rankColor : const Color(0xFF00E5FF)) : null,
                           ),
-                        ],
-                      ),
-                      title: Text(u['name'] ?? 'لاعب', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      subtitle: Text(u['level'] ?? 'BRONZE', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.stars, color: Colors.amber, size: 20),
-                          Text('${u['points']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                          Padding(
+                            padding: const EdgeInsets.all(14.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(child: Text(pitch['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                    Text('${pitch['pricePerHour']} ج.م/ساعة', style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 16)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.location_on, size: 16, color: AppTheme.neonOrange),
+                                    const SizedBox(width: 4),
+                                    Text('$distanceKm كم', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: Text('• ${pitch['location']}', style: const TextStyle(color: Colors.white70, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.star, size: 16, color: Colors.amber),
+                                        const SizedBox(width: 4),
+                                        Text('${pitch['rating'] ?? 0.0}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+                                      ],
+                                    )
+                                  ],
+                                )
+                              ],
+                            ),
+                          )
                         ],
                       ),
                     ),
-                  ).animate().fade(duration: 400.ms, delay: (100 * index).ms).slideX(begin: 0.1);
+                  ).animate().fade(duration: 500.ms, delay: (50 * index).ms).slideX(begin: 0.1, end: 0, curve: Curves.easeOutQuad);
                 },
               ),
-      ),
-    );
-  }
-
-  Widget _buildProfileTab(BuildContext context, WidgetRef ref, Map<String, dynamic>? user) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 45,
-            backgroundColor: const Color(0xFF00E5FF).withOpacity(0.1),
-            child: const Icon(Icons.person, size: 50, color: Color(0xFF00E5FF)),
-          ),
-          const SizedBox(height: 16),
-          Text(user?['name'] ?? 'مستخدم', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          Text(user?['phone'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 16)),
-          const SizedBox(height: 8),
-          Chip(
-            label: Text(user?['role'] == 'OWNER' ? 'صاحب ملعب / منشأة' : 'لاعب'),
-            backgroundColor: const Color(0xFF00E5FF).withOpacity(0.1),
-            side: BorderSide.none,
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.edit, size: 18),
-            label: const Text('تعديل الحساب'),
-            onPressed: () => _showEditProfileDialog(context, ref, user),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF00E5FF),
-              side: const BorderSide(color: Color(0xFF00E5FF)),
-            ),
-          ),
-          const SizedBox(height: 32),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: Text('حجوزاتي', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00E5FF))),
-          ),
-          const SizedBox(height: 12),
-          Consumer(
-            builder: (context, ref, child) {
-              final bookingsAsync = ref.watch(myBookingsProvider);
-              return bookingsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, st) => Text('خطأ: $e'),
-                data: (bookings) => bookings.isEmpty
-                    ? const Padding(padding: EdgeInsets.all(20), child: Text('لم تقم بأي حجز بعد.', style: TextStyle(color: Colors.grey)))
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: bookings.length,
-                        itemBuilder: (context, index) {
-                          final b = bookings[index];
-                          final pitchName = b['pitch']?['name'] ?? 'ملعب';
-                          final start = DateTime.tryParse(b['startTime'] ?? '')?.toLocal();
-                          final end = DateTime.tryParse(b['endTime'] ?? '')?.toLocal();
-                          final dateStr = start != null ? "${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}" : '';
-                          final timeStr = start != null && end != null ? "${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')} - ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}" : '';
-                          
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: const Icon(Icons.sports_soccer, color: Color(0xFF00E5FF)),
-                              title: Text(pitchName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(dateStr + '\n' + timeStr),
-                              trailing: Text("${b['price']} ج.م", style: const TextStyle(color: Color(0xFFFF9100), fontWeight: FontWeight.bold)),
-                              isThreeLine: true,
-                            ),
-                          ).animate().fade(duration: 400.ms, delay: (100 * index).ms).slideX(begin: 0.1);
-                        },
-                      ),
-              );
-            },
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.logout),
-              label: const Text('تسجيل خروج'),
-              onPressed: () => ref.read(currentUserProvider.notifier).state = null,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  
-  void _showCreateMatchDialog() {
-    String title = '';
-    String desc = '';
-    String spots = '1';
-    String cost = '50';
-    DateTime date = DateTime.now();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('إضافة طلب لاعبين', style: TextStyle(color: Color(0xFF00E5FF))),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(decoration: const InputDecoration(labelText: 'العنوان (مثال: محتاجين 2 لاعيبة)'), onChanged: (v) => title = v),
-              const SizedBox(height: 8),
-              TextField(decoration: const InputDecoration(labelText: 'التفاصيل واسم الملعب'), onChanged: (v) => desc = v),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(child: TextField(decoration: const InputDecoration(labelText: 'العدد الناقص'), keyboardType: TextInputType.number, onChanged: (v) => spots = v)),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(decoration: const InputDecoration(labelText: 'حصة الفرد (ج.م)'), keyboardType: TextInputType.number, onChanged: (v) => cost = v)),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E5FF), foregroundColor: Colors.black),
-            onPressed: () async {
-              try {
-                await ref.read(dioProvider).post('/match-requests', data: {
-                  'title': title, 'description': desc, 'missingSpots': spots, 'costPerSpot': cost, 'matchTime': date.toIso8601String()
-                });
-                if (mounted) { Navigator.pop(ctx); ref.refresh(matchRequestsProvider); }
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
-              }
-            },
-            child: const Text('نشر الطلب'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditProfileDialog(BuildContext context, WidgetRef ref, Map<String, dynamic>? user) {
-    if (user == null) return;
-    String name = user['name'] ?? '';
-    String phone = user['phone'] ?? '';
-    String profilePic = user['profilePic'] ?? '';
-    
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('تعديل الحساب'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'الاسم'),
-                controller: TextEditingController(text: name)..selection = TextSelection.collapsed(offset: name.length),
-                onChanged: (v) => name = v,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: const InputDecoration(labelText: 'رقم الهاتف'),
-                controller: TextEditingController(text: phone)..selection = TextSelection.collapsed(offset: phone.length),
-                onChanged: (v) => phone = v,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: const InputDecoration(labelText: 'رابط الصورة الشخصية'),
-                controller: TextEditingController(text: profilePic)..selection = TextSelection.collapsed(offset: profilePic.length),
-                onChanged: (v) => profilePic = v,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                final dio = ref.read(dioProvider);
-                await dio.put('/users/me', data: {
-                  'name': name,
-                  'phone': phone,
-                  'profilePic': profilePic,
-                });
-                if (context.mounted) Navigator.pop(ctx);
-                ref.read(currentUserProvider.notifier).state = {
-                  ...user,
-                  'name': name,
-                  'phone': phone,
-                  'profilePic': profilePic,
-                };
-              } catch (e) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدث خطأ')));
-              }
-            },
-            child: const Text('حفظ'),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }

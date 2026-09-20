@@ -1,6 +1,8 @@
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
 import 'package:intl/intl.dart';
@@ -22,7 +24,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
     final detailsAsync = ref.watch(pitchDetailsProvider(widget.pitchId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: AppTheme.backgroundDark,
       body: detailsAsync.when(
         data: (pitch) {
           final bookings = pitch['bookings'] as List? ?? [];
@@ -40,7 +42,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
               SliverAppBar(
                 expandedHeight: 250.0,
                 pinned: true,
-                backgroundColor: const Color(0xFF121212),
+                backgroundColor: AppTheme.surfaceDark,
                 foregroundColor: Colors.white,
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 10)]),
@@ -86,12 +88,12 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                       ),
                       const Divider(height: 48, thickness: 1),
                       
-                      const Text('تحديد وقت الحجز:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF00E5FF))),
+                      const Text('تحديد وقت الحجز:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.neonBlue)),
                       const SizedBox(height: 8),
                       ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.withOpacity(0.3))),
                         title: Text('التاريخ: '),
-                        trailing: const Icon(Icons.calendar_today, color: Color(0xFF00E5FF)),
+                        trailing: const Icon(Icons.calendar_today, color: AppTheme.neonBlue),
                         onTap: () async {
                           final d = await showDatePicker(
                             context: context, 
@@ -100,7 +102,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                             lastDate: DateTime.now().add(const Duration(days: 30)),
                             builder: (context, child) => Theme(
                               data: ThemeData.dark().copyWith(
-                                colorScheme: const ColorScheme.dark(primary: Color(0xFF00E5FF), onPrimary: Colors.black, surface: Color(0xFF121212), onSurface: Colors.white),
+                                colorScheme: const ColorScheme.dark(primary: AppTheme.neonBlue, onPrimary: Colors.black, surface: AppTheme.surfaceDark, onSurface: Colors.white),
                               ),
                               child: child!,
                             ),
@@ -152,7 +154,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                               
                               final bool isSelected = selectedHours.contains(h);
                               
-                              Color bgColor = const Color(0xFF1A1A1A);
+                              Color bgColor = AppTheme.surfaceLighter;
                               Color textColor = Colors.white;
                               Color borderColor = Colors.grey.withOpacity(0.3);
                               
@@ -164,9 +166,9 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                                 textColor = Colors.red;
                                 borderColor = Colors.red.withOpacity(0.5);
                               } else if (isSelected) {
-                                bgColor = const Color(0xFF00E5FF).withOpacity(0.2);
-                                textColor = const Color(0xFF00E5FF);
-                                borderColor = const Color(0xFF00E5FF);
+                                bgColor = AppTheme.neonBlue.withOpacity(0.2);
+                                textColor = AppTheme.neonBlue;
+                                borderColor = AppTheme.neonBlue;
                               }
                               
                               return InkWell(
@@ -208,15 +210,15 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF9100).withOpacity(0.1),
+                              color: AppTheme.neonOrange.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFFF9100).withOpacity(0.5)),
+                              border: Border.all(color: AppTheme.neonOrange.withOpacity(0.5)),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('إجمالي التكلفة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                Text('${(pitch['pricePerHour'] ?? 0) * selectedHours.length} ج.م', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFFF9100))),
+                                Text('${(pitch['pricePerHour'] ?? 0) * selectedHours.length} ج.م', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.neonOrange)),
                               ],
                             ),
                           ),
@@ -229,7 +231,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                         builder: (context, ref, child) {
                           final boardAsync = ref.watch(venueLeaderboardProvider(widget.pitchId));
                           return boardAsync.when(
-                            loading: () => const Center(child: CircularProgressIndicator()),
+                            loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
                             error: (e, st) => Text('خطأ في تحميل الترتيب: $e'),
                             data: (players) {
                               if (players.isEmpty) return const Text('كن أول من يحجز هذا الملعب لتتصدر القائمة!', style: TextStyle(color: Colors.grey));
@@ -246,7 +248,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                                   if (index == 2) rankColor = const Color(0xFFCD7F32);
                                   
                                   return Card(
-                                    color: const Color(0xFF1A1A1A),
+                                    color: AppTheme.surfaceLighter,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                       side: isTop3 ? BorderSide(color: rankColor.withOpacity(0.5)) : BorderSide.none,
@@ -268,7 +270,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      const Text('التقييمات والآراء:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: const Color(0xFF00E5FF))),
+                      const Text('التقييمات والآراء:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.neonBlue)),
                       const SizedBox(height: 8),
                       if ((pitch['reviews'] as List? ?? []).isEmpty)
                         const Text('لا توجد تقييمات حتى الآن. كن أول من يقيّم!'),
@@ -331,7 +333,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                         builder: (context, ref, child) {
                           final boardAsync = ref.watch(venueLeaderboardProvider(widget.pitchId));
                           return boardAsync.when(
-                            loading: () => const Center(child: CircularProgressIndicator()),
+                            loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
                             error: (e, st) => Text('خطأ في تحميل الترتيب: $e'),
                             data: (players) {
                               if (players.isEmpty) return const Text('كن أول من يحجز هذا الملعب لتتصدر القائمة!', style: TextStyle(color: Colors.grey));
@@ -348,7 +350,7 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
                                   if (index == 2) rankColor = const Color(0xFFCD7F32);
                                   
                                   return Card(
-                                    color: const Color(0xFF1A1A1A),
+                                    color: AppTheme.surfaceLighter,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                       side: isTop3 ? BorderSide(color: rankColor.withOpacity(0.5)) : BorderSide.none,
@@ -376,14 +378,14 @@ class _PitchDetailsScreenState extends ConsumerState<PitchDetailsScreen> {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
         error: (err, stack) => Center(child: Text('خطأ: $err')),
       ),
       bottomNavigationBar: detailsAsync.hasValue ? Padding(
         padding: const EdgeInsets.all(16.0),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00E5FF),
+              backgroundColor: AppTheme.neonBlue,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),

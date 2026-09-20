@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String kProductionApiUrl = 'http://localhost:3001/api';
+const String kProductionApiUrl = 'http://192.168.1.10:3001/api';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
@@ -42,7 +42,7 @@ final pitchDetailsProvider = FutureProvider.family<Map<String, dynamic>, String>
 
 final matchRequestsProvider = FutureProvider<List<dynamic>>((ref) async {
   final dio = ref.watch(dioProvider);
-  final response = await dio.get('/match-requests');
+  final response = await dio.get('/matches');
   return response.data;
 });
 
