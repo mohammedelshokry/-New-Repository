@@ -42,7 +42,7 @@ final pitchDetailsProvider = FutureProvider.family<Map<String, dynamic>, String>
 
 final matchRequestsProvider = FutureProvider<List<dynamic>>((ref) async {
   final dio = ref.watch(dioProvider);
-  final response = await dio.get('/matches');
+  final response = await dio.get('/match-requests');
   return response.data;
 });
 
