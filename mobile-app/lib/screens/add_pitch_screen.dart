@@ -122,6 +122,7 @@ class _AddPitchScreenState extends ConsumerState<AddPitchScreen> {
         'pricePerHour': double.tryParse(_priceCtrl.text) ?? 200,
         'images': uploadedImageUrls,
         'amenities': _isAirConditioned ? 'AC' : '',
+        'surface': '\u063a\u064a\u0631 \u0645\u062d\u062f\u062f', // Fix for missing surface field
       };
 
       await dio.post('/pitches', data: payload);
