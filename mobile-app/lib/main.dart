@@ -15,7 +15,7 @@ import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/owner_dashboard_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
-import 'screens/pitch_details_screen.dart';
+import 'screens/venue_details_screen.dart';
 
 
 @pragma('vm:entry-point')
@@ -57,12 +57,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/home', builder: (context, state) => const HomeOrOwnerWrapper(),),
       GoRoute(
-        path: '/pitch/:id',
+        path: '/venue/:id',
         pageBuilder: (context, state) {
           final pitchId = state.pathParameters['id']!;
           return CustomTransitionPage(
             key: state.pageKey,
-            child: PitchDetailsScreen(pitchId: pitchId),
+            child: VenueDetailsScreen(venueId: pitchId),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },

@@ -11,7 +11,7 @@ class MapScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pitchesAsync = ref.watch(pitchesProvider);
+    final pitchesAsync = ref.watch(venuesProvider);
 
     return Scaffold(
       appBar: AppBar(

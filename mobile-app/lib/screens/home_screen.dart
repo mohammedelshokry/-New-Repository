@@ -722,7 +722,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildPitchesTab() {
-    final pitchesAsync = ref.watch(pitchesProvider);
+    final pitchesAsync = ref.watch(venuesProvider);
 
     return Column(
       children: [
@@ -752,9 +752,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: ['All', 'Football', 'Padel', 'PlayStation'].map((cat) {
+            children: ['All', 'كرة قدم', 'بادل', 'بلايستيشن', 'تنس', 'بلياردو', 'كرة طائرة'].map((cat) {
               final isSelected = _selectedCategory == cat;
-              final label = cat == 'All' ? 'الكل' : (cat == 'Football' ? 'ملاعب قدم' : (cat == 'Padel' ? 'بادل' : 'بلايستيشن'));
+                final label = cat == 'All' ? 'الكل' : cat;
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
@@ -795,11 +795,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           error: (err, stack) => Center(child: Text('خطأ: $err', style: const TextStyle(color: Colors.white))),
           data: (pitches) {
             final filteredPitches = pitches.where((p) {
-              final matchesCategory = _selectedCategory == 'All' || p['category'] == _selectedCategory;
+
+              bool hasCategory = _selectedCategory == 'All';
+              if (!hasCategory && p['courts'] != null) {
+                for (var c in p['courts']) {
+                  if (c['category'] == _selectedCategory) hasCategory = true;
+                }
+              }
+              if (!hasCategory) return false;
+
               final name = (p['name'] ?? '').toString().toLowerCase();
               final type = (p['type'] ?? '').toString().toLowerCase();
               final matchesSearch = _searchQuery.isEmpty || name.contains(_searchQuery) || type.contains(_searchQuery);
-              return matchesCategory && matchesSearch;
+              return matchesSearch;
             }).toList();
 
             return Expanded(

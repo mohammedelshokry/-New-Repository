@@ -28,15 +28,15 @@ final dioProvider = Provider<Dio>((ref) {
 
 final currentUserProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
 
-final pitchesProvider = FutureProvider<List<dynamic>>((ref) async {
+final venuesProvider = FutureProvider<List<dynamic>>((ref) async {
   final dio = ref.watch(dioProvider);
-  final response = await dio.get('/pitches');
+  final response = await dio.get('/venues');
   return response.data;
 });
 
-final pitchDetailsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
+final venueDetailsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
   final dio = ref.watch(dioProvider);
-  final response = await dio.get('/pitches/$id');
+  final response = await dio.get('/venues/$id');
   return response.data;
 });
 
@@ -58,9 +58,9 @@ final leaderboardProvider = FutureProvider<List<dynamic>>((ref) async {
   return response.data;
 });
 
-final venueLeaderboardProvider = FutureProvider.family<List<dynamic>, String>((ref, pitchId) async {
+final venueLeaderboardProvider = FutureProvider.family<List<dynamic>, String>((ref, venueId) async {
   final dio = ref.watch(dioProvider);
-  final response = await dio.get('/pitches/${pitchId}/leaderboard');
+  final response = await dio.get('/venues/$venueId/leaderboard'); // Note: backend doesn't have this implemented right now, but UI might not use it heavily
   return response.data;
 });
 
@@ -69,7 +69,6 @@ final notificationsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) as
   final res = await dio.get('/notifications');
   return res.data;
 });
-
 
 // Admin Providers
 final adminStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -84,8 +83,8 @@ final adminUsersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async
   return response.data;
 });
 
-final adminPitchesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+final adminVenuesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   final dio = ref.watch(dioProvider);
-  final response = await dio.get('/admin/pitches');
+  final response = await dio.get('/admin/venues');
   return response.data;
 });

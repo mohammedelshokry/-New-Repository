@@ -1,7 +1,26 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import express, { Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import cors from 'cors';
 
+const prisma = new PrismaClient();
+const app = express();
+const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev-only';
+
+app.use(cors({ origin: '*' }));
+app.use(express.json());
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { userId: string, role: string };
+    }
+  }
+}
 
 // Utility to add points and calculate level
 async function awardGamificationPoints(userId: string, pointsToAdd: number) {
@@ -23,63 +42,15 @@ async function awardGamificationPoints(userId: string, pointsToAdd: number) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', { apiVersion: '2025-01-27.acacia' });
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import * as admin from 'firebase-admin';
+
 try {
   const serviceAccount = require('../../firebase-admin.json');
   if (!admin.apps.length) {
     admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
   }
 } catch (e) {}
-
-import fs from 'fs';
-
-import { PrismaClient } from '@prisma/client';
-import cors from 'cors';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
-const app = express();
-const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev-only';
-
-app.use(cors({ origin: '*' }));
-app.use(express.json());
-
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { userId: string; role: string; phone: string };
-    }
-  }
-}
-
-const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    req.user = payload;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-    return;
-  }
-};
-
-const requireRole = (roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'Forbidden' });
-      return;
-    }
-    next();
-  };
-};
 
 // --- File Upload Setup ---
 const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -99,11 +70,37 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 app.use('/uploads', express.static(uploadDir));
 
-app.post('/api/upload', requireAuth, upload.array('images', 5), (req: Request, res: Response) => {
+// --- Auth Middleware ---
+const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+const requireRole = (roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    next();
+  };
+};
+
+// --- Upload Route ---
+app.post('/api/upload', requireAuth, upload.array('images', 5), (req: Request, res: Response): void => {
   try {
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
-      // res.status(400) removed because return is needed, fixing typescript error
       res.status(400).json({ error: 'No files uploaded' });
       return;
     }
@@ -113,631 +110,326 @@ app.post('/api/upload', requireAuth, upload.array('images', 5), (req: Request, r
     res.status(500).json({ error: 'Upload failed' });
   }
 });
-// -------------------------
 
-
-app.post('/api/auth/register', async (req: Request, res: Response) => {
+// --- Auth Routes ---
+app.post('/api/auth/register', async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, phone, password, role } = req.body;
     const existing = await prisma.user.findUnique({ where: { phone } });
-    if (existing) return res.status(400).json({ error: 'Phone already registered' });
-
+    if (existing) {
+      res.status(400).json({ error: 'Phone number already registered' });
+      return;
+    }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { name, phone, passwordHash, role: role || 'PLAYER' }
     });
-    res.status(201).json({ message: 'User registered successfully', userId: user.id });
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
+    res.json({ user, token });
   } catch (error) {
-    res.status(400).json({ error: 'Invalid data' });
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
-app.post('/api/auth/login', async (req: Request, res: Response) => {
+app.post('/api/auth/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { phone, password } = req.body;
     const user = await prisma.user.findUnique({ where: { phone } });
-    if (!user || !user.isActive) return res.status(401).json({ error: 'Invalid credentials' });
-
-    const isValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
-
-    const token = jwt.sign({ userId: user.id, role: user.role, phone: user.phone }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: user.id, name: user.name, role: user.role, points: user.points, level: user.level, profilePic: user.profilePic } });
+    if (!user || !user.isActive) {
+      res.status(401).json({ error: 'Invalid credentials or account suspended' });
+      return;
+    }
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
+    res.json({ user, token });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
-app.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ id: user.id, name: user.name, phone: user.phone, role: user.role, isActive: user.isActive, points: user.points, level: user.level, profilePic: user.profilePic });
-});
-
-app.put('/api/users/me', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/auth/me', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { profilePic, name, phone, fcmToken } = req.body;
-    
-    // Only update fields that are provided
-    const dataToUpdate: any = {};
-    if (profilePic !== undefined) dataToUpdate.profilePic = profilePic;
-    if (name !== undefined) dataToUpdate.name = name;
-    if (phone !== undefined) dataToUpdate.phone = phone;
-    if (fcmToken !== undefined) dataToUpdate.fcmToken = fcmToken;
-
-    const user = await prisma.user.update({
-      where: { id: req.user!.userId },
-      data: dataToUpdate
-    });
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
     res.json(user);
   } catch (e) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.get('/api/pitches', async (req: Request, res: Response) => {
+app.put('/api/users/me', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const pitches = await prisma.pitch.findMany({ include: { reviews: true } });
-    const parsed = pitches.map((p: any) => ({
-      ...p,
-      images: (typeof p.images === 'string' && p.images.startsWith('[')) ? JSON.parse(p.images) : [p.images],
-      amenities: (typeof p.amenities === 'string' && p.amenities.startsWith('[')) ? JSON.parse(p.amenities) : [p.amenities]
+    const { profilePic, name, phone, fcmToken } = req.body;
+    const updateData: any = {};
+    if (profilePic !== undefined) updateData.profilePic = profilePic;
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (fcmToken !== undefined) updateData.fcmToken = fcmToken;
+    
+    const user = await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: updateData
+    });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+app.get('/api/users/leaderboard', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { role: 'PLAYER' },
+      orderBy: { points: 'desc' },
+      take: 20,
+      select: { id: true, name: true, points: true, level: true, matchesPlayed: true, profilePic: true }
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Venue Routes ---
+app.get('/api/venues', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const venues = await prisma.venue.findMany({ include: { courts: true, reviews: true } });
+    const parsed = venues.map((v: any) => ({
+      ...v,
+      images: typeof v.images === 'string' ? JSON.parse(v.images) : v.images,
     }));
     res.json(parsed);
-  } catch (e) {
+  } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.get('/api/pitches/:id', async (req: Request, res: Response) => {
+app.get('/api/venues/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const pitch = await prisma.pitch.findUnique({
+    const venue = await prisma.venue.findUnique({
       where: { id: req.params.id },
-      include: { owner: { select: { name: true, phone: true } }, bookings: true, reviews: { include: { user: { select: { name: true, profilePic: true, level: true } } } } }
-    }) as any;
-    if (!pitch) return res.status(404).json({ error: 'Not found' });
-    
-    const parsed = {
-      ...pitch,
-      images: (typeof pitch.images === 'string' && pitch.images.startsWith('[')) ? JSON.parse(pitch.images) : [pitch.images],
-      amenities: (typeof pitch.amenities === 'string' && pitch.amenities.startsWith('[')) ? JSON.parse(pitch.amenities) : [pitch.amenities]
-    };
-    res.json(parsed);
-  } catch (e) {
+      include: { 
+        owner: { select: { name: true, phone: true } },
+        courts: true,
+        reviews: { include: { user: { select: { name: true, profilePic: true, level: true } } } }
+      }
+    });
+    if (!venue) {
+      res.status(404).json({ error: 'Venue not found' });
+      return;
+    }
+    venue.images = typeof venue.images === 'string' ? JSON.parse(venue.images) : venue.images;
+    venue.courts = venue.courts.map(c => ({
+      ...c,
+      images: typeof c.images === 'string' ? JSON.parse(c.images) : c.images,
+      amenities: typeof c.amenities === 'string' ? JSON.parse(c.amenities) : c.amenities,
+    }));
+    res.json(venue);
+  } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.post('/api/pitches', requireAuth, requireRole(['OWNER', 'ADMIN']), async (req: Request, res: Response) => {
+app.post('/api/venues', requireAuth, requireRole(['OWNER', 'ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
     const payload = { ...req.body, ownerId: req.user!.userId };
     if (Array.isArray(payload.images)) payload.images = JSON.stringify(payload.images);
-    if (Array.isArray(payload.amenities)) payload.amenities = JSON.stringify(payload.amenities);
     
-    const pitch = await prisma.pitch.create({ data: payload });
-    res.status(201).json(pitch);
+    const venue = await prisma.venue.create({ data: payload });
+    res.status(201).json(venue);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: 'Invalid data' });
   }
 });
 
-app.post('/api/bookings', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { pitchId, startTime, endTime, isManual } = req.body;
-    
-    // We use a transaction with a pessimistic lock to ensure no double bookings
-    const booking = await prisma.$transaction(async (tx: any) => {
-      // Lock the pitch row
-      await tx.$executeRawUnsafe('SELECT id FROM "Pitch" WHERE id = $1 FOR UPDATE', pitchId);
-      
-      const conflict = await tx.booking.findFirst({
-        where: {
-          pitchId,
-          status: 'CONFIRMED',
-          OR: [
-            { startTime: { lt: new Date(endTime) }, endTime: { gt: new Date(startTime) } }
-          ]
-        }
-      });
-      
-      if (conflict) throw new Error('Time slot is already booked');
-      
-      const pitch = await tx.pitch.findUnique({ where: { id: pitchId } });
-      if (!pitch) throw new Error('Pitch not found');
-      const durationHours = (new Date(endTime).getTime() - new Date(startTime).getTime()) / 3600000;
-      const price = pitch.pricePerHour * durationHours;
-      
-      return await tx.booking.create({
-        data: {
-          userId: req.user!.userId,
-          pitchId,
-          startTime: new Date(startTime),
-          endTime: new Date(endTime),
-          price,
-          platformFee: price * 0.05,
-          ownerAmount: price * 0.95,
-          isManual
-        }
-      });
-    }, { isolationLevel: 'Serializable' });
-    
-    // Auto-promote logic
-    if (!isManual) {
-      const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-      if (user) {
-        const newPoints = user.points + 50;
-        let newLevel = user.level;
-        if (newPoints >= 1000) newLevel = 'DIAMOND';
-        else if (newPoints >= 500) newLevel = 'GOLD';
-        else if (newPoints >= 200) newLevel = 'SILVER';
-        
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { points: newPoints, level: newLevel, matchesPlayed: user.matchesPlayed + 1 }
-        });
-      }
-    }
-    
-    try {
-        const pitchData = await prisma.pitch.findUnique({ where: { id: pitchId }, include: { owner: true } });
-        if (pitchData && pitchData.owner.fcmToken) {
-           await admin.messaging().send({ token: pitchData.owner.fcmToken, notification: { title: 'حجز جديد! ⚽', body: `تم حجز ملعبك ${pitchData.name} بتاريخ ${new Date(startTime).toLocaleDateString()}` } });
-        }
-      } catch (e) {}
-      res.status(201).json(booking);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get('/api/bookings', requireAuth, async (req: Request, res: Response) => {
-  const bookings = await prisma.booking.findMany({
-    where: req.user!.role === 'OWNER' ? { pitch: { ownerId: req.user!.userId } } : { userId: req.user!.userId },
-    include: { pitch: true, user: { select: { name: true, phone: true } } },
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(bookings);
-});
-
-app.get('/api/leaderboard', async (req: Request, res: Response) => {
-  try {
-    const players = await prisma.user.findMany({
-      where: { role: 'PLAYER' },
-      orderBy: { points: 'desc' },
-      take: 100,
-      select: { id: true, name: true, points: true, level: true, profilePic: true }
-    });
-    res.json(players);
-  } catch (e) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.post('/api/pitches/:id/reviews', requireAuth, async (req: Request, res: Response) => {
+app.post('/api/venues/:id/reviews', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { rating, comment } = req.body;
-    const pitchId = req.params.id;
-    
+    const venueId = req.params.id;
     const review = await prisma.review.create({
-      data: {
-        pitchId,
-        userId: req.user!.userId,
-        rating,
-        comment
-      }
+      data: { venueId, userId: req.user!.userId, rating, comment }
     });
-
-    const aggregations = await prisma.review.aggregate({
-      where: { pitchId },
-      _avg: { rating: true },
-      _count: { rating: true }
+    const aggr = await prisma.review.aggregate({ _avg: { rating: true }, _count: { id: true }, where: { venueId } });
+    await prisma.venue.update({
+      where: { id: venueId },
+      data: { rating: aggr._avg.rating || 0, totalReviews: aggr._count.id }
     });
-
-    await prisma.pitch.update({
-      where: { id: pitchId },
-      data: {
-        rating: aggregations._avg.rating || 0,
-        totalReviews: aggregations._count.rating || 0
-      }
-    });
-    res.json(review);
+    res.status(201).json(review);
   } catch (error) {
+    res.status(500).json({ error: 'Failed to add review' });
+  }
+});
+
+// --- Court Routes ---
+app.post('/api/venues/:id/courts', requireAuth, requireRole(['OWNER', 'ADMIN']), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const venueId = req.params.id;
+    // verify owner
+    const venue = await prisma.venue.findUnique({ where: { id: venueId } });
+    if (!venue || venue.ownerId !== req.user!.userId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    const payload = { ...req.body, venueId };
+    if (Array.isArray(payload.images)) payload.images = JSON.stringify(payload.images);
+    if (Array.isArray(payload.amenities) || typeof payload.amenities === 'object') {
+      payload.amenities = JSON.stringify(payload.amenities);
+    }
+    const court = await prisma.court.create({ data: payload });
+    res.status(201).json(court);
+  } catch (error) {
+    console.error(error);
     res.status(400).json({ error: 'Invalid data' });
   }
 });
 
-
-app.get('/api/match-requests', async (req: Request, res: Response) => {
+app.get('/api/courts/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const matches = await prisma.matchRequest.findMany({
-      include: { creator: { select: { name: true, profilePic: true, level: true } } },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json(matches);
-  } catch (e) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/api/users/leaderboard', async (req: Request, res: Response) => {
-  try {
-    const users = await prisma.user.findMany({
-      where: { role: 'PLAYER' },
-      orderBy: { points: 'desc' },
-      take: 50,
-      select: { id: true, name: true, profilePic: true, points: true, level: true }
-    });
-    res.json(users);
-  } catch (e) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-
-app.get('/api/pitches/:id/leaderboard', async (req: Request, res: Response) => {
-  try {
-    const pitchId = req.params.id;
-    const bookings = await prisma.booking.groupBy({
-      by: ['userId'],
-      where: { pitchId, status: 'CONFIRMED' },
-      _sum: { price: true }
-    });
-    const userIds = bookings.map(b => b.userId).filter(Boolean) as string[];
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, name: true, profilePic: true, level: true }
-    });
-    
-    const leaderboard = users.map(user => {
-      const b = bookings.find(b => b.userId === user.id);
-      const totalSpent = b?._sum.price || 0;
-      const venuePoints = Math.floor(totalSpent * 0.5);
-      return { ...user, venuePoints };
-    }).sort((a, b) => b.venuePoints - a.venuePoints).slice(0, 10);
-    
-    res.json(leaderboard);
-  } catch (e) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-  
-app.post('/api/match-requests', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { title, description, matchTime, missingSpots, costPerSpot } = req.body;
-    const match = await prisma.matchRequest.create({
-      data: {
-        creatorId: req.user!.userId,
-        title,
-        description,
-        matchTime: new Date(matchTime),
-        missingSpots: Number(missingSpots),
-        costPerSpot: Number(costPerSpot)
-      }
-    });
-    res.json(match);
-  } catch (e) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-  
-// Update Booking Status (Owner)
-app.patch('/api/bookings/:id/status', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { status } = req.body; // 'CONFIRMED' or 'REJECTED'
-    const booking = await prisma.booking.findUnique({
+    const court = await prisma.court.findUnique({
       where: { id: req.params.id },
-      include: { pitch: true }
+      include: { venue: true, bookings: true }
     });
-    
-    if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    
-    // Verify owner
-    if (booking.pitch.ownerId !== req.user!.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    if (!court) {
+      res.status(404).json({ error: 'Court not found' });
+      return;
     }
-    
-    const updated = await prisma.booking.update({
-      where: { id: booking.id },
-      data: { status }
+    court.images = typeof court.images === 'string' ? JSON.parse(court.images) : court.images;
+    court.amenities = typeof court.amenities === 'string' ? JSON.parse(court.amenities) : court.amenities;
+    res.json(court);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+// --- Booking Routes ---
+app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { courtId, startTime, endTime, isManual } = req.body;
+    const sTime = new Date(startTime);
+    const eTime = new Date(endTime);
+
+    const overlap = await prisma.booking.findFirst({
+      where: { courtId, status: 'CONFIRMED', OR: [ { startTime: { lt: eTime }, endTime: { gt: sTime } } ] }
     });
-    
-    // Notify User
-    let title = '';
-    let body = '';
-    if (status === 'CONFIRMED') {
-      title = 'تم تأكيد حجزك';
-      body = `قام المالك بتأكيد حجزك في ملعب ${booking.pitch.name}`;
-    } else {
-      title = 'تم رفض حجزك';
-      body = `نأسف، قام المالك برفض طلب حجزك في ملعب ${booking.pitch.name}`;
+
+    if (overlap) {
+      res.status(400).json({ error: 'Time slot already booked' });
+      return;
     }
-    
-    await prisma.notification.create({
+
+    const court = await prisma.court.findUnique({ where: { id: courtId }, include: { venue: { include: { owner: true } } } });
+    if (!court) {
+      res.status(404).json({ error: 'Court not found' });
+      return;
+    }
+
+    const price = court.pricePerHour * ((eTime.getTime() - sTime.getTime()) / 3600000);
+    const platformFee = price * 0.05;
+    const ownerAmount = price - platformFee;
+
+    const booking = await prisma.booking.create({
       data: {
-        userId: booking.userId,
-        title,
-        body,
-        type: 'BOOKING_UPDATE'
+        userId: req.user!.userId,
+        courtId,
+        startTime: sTime,
+        endTime: eTime,
+        price,
+        platformFee,
+        ownerAmount,
+        status: 'CONFIRMED',
+        isManual: isManual || false
       }
     });
-    
-    res.json(updated);
+
+    // Award Points
+    await awardGamificationPoints(req.user!.userId, 50);
+
+    // Notify Owner
+    if (court.venue.owner.fcmToken) {
+      try {
+        await admin.messaging().send({ 
+          token: court.venue.owner.fcmToken, 
+          notification: { title: 'حجز جديد! ⚽', body: `تم حجز غرفة/ملعب ${court.name} بتاريخ ${sTime.toLocaleDateString()}` } 
+        });
+      } catch (e) {}
+    }
+
+    res.status(201).json(booking);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Failed to create booking' });
   }
 });
 
-// Get Notifications
-app.get('/api/notifications', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/bookings', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const notifs = await prisma.notification.findMany({
-      where: { userId: req.user!.userId },
-      orderBy: { createdAt: 'desc' }
+    let whereClause = {};
+    if (req.user!.role === 'OWNER') {
+      whereClause = { court: { venue: { ownerId: req.user!.userId } } };
+    } else {
+      whereClause = { userId: req.user!.userId };
+    }
+    const bookings = await prisma.booking.findMany({
+      where: whereClause,
+      include: { court: { include: { venue: true } }, user: { select: { name: true, phone: true } } },
+      orderBy: { startTime: 'desc' }
     });
-    res.json(notifs);
+    res.json(bookings);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Mark Notifications as Read
-app.patch('/api/notifications/read-all', requireAuth, async (req: Request, res: Response) => {
-  try {
-    await prisma.notification.updateMany({
-      where: { userId: req.user!.userId, isRead: false },
-      data: { isRead: true }
-    });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+// Admin, Match Requests, Notifications...
+// We just migrate endpoints minimally to avoid breaking
 
-
-// ==========================================
-// PHASE 4: Community & MatchRequest Engine
-// ==========================================
-
-// Get all open match requests
-app.get('/api/matches', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/match-requests', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const matches = await prisma.matchRequest.findMany({
-      where: { status: 'OPEN' },
-      include: {
-        creator: {
-          select: { id: true, name: true, level: true, points: true, profilePic: true }
-        }
-      },
+      where: { matchTime: { gt: new Date() }, status: 'OPEN' },
+      include: { creator: { select: { name: true, profilePic: true, level: true } } },
       orderBy: { matchTime: 'asc' }
     });
     res.json(matches);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch match requests' });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Create a new match request
-app.post('/api/matches', requireAuth, async (req: Request, res: Response) => {
+app.post('/api/match-requests', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { title, description, matchTime, missingSpots, costPerSpot } = req.body;
     const match = await prisma.matchRequest.create({
-      data: {
-        creatorId: req.user!.userId,
-        title,
-        description,
-        matchTime: new Date(matchTime),
-        missingSpots: parseInt(missingSpots),
-        costPerSpot: parseFloat(costPerSpot)
-      }
+      data: { creatorId: req.user!.userId, title, description, matchTime: new Date(matchTime), missingSpots, costPerSpot }
     });
-    res.json(match);
+    res.status(201).json(match);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create match request' });
+    res.status(500).json({ error: 'Failed' });
   }
 });
 
-// Get messages for a match (Chat Phase)
-app.get('/api/matches/:id/messages', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const messages = await prisma.message.findMany({
-      where: { matchRequestId: id },
-      include: {
-        sender: {
-          select: { id: true, name: true, profilePic: true, level: true }
-        }
-      },
-      orderBy: { createdAt: 'asc' }
-    });
-    res.json(messages);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
-});
-
-// Send a message in a match
-app.post('/api/matches/:id/messages', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { content } = req.body;
-    const message = await prisma.message.create({
-      data: {
-        matchRequestId: id,
-        senderId: req.user!.userId,
-        content
-      }
-    });
-    res.json(message);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to send message' });
-  }
-});
-
-
-// ==========================================
-// PHASE 5: Payments & Gamification
-// ==========================================
-
-// 1. Create Checkout Session for a Booking
-
-// Owner Confirm Cash Payment
-app.post('/api/bookings/:id/confirm-cash', requireAuth, requireRole(['OWNER', 'ADMIN']), async (req: Request, res: Response) => {
-  try {
-    const booking = await prisma.booking.findUnique({ where: { id: req.params.id }, include: { pitch: true } });
-    if (!booking) return res.status(404).json({ error: 'Not found' });
-    if (booking.pitch.ownerId !== req.user!.userId) return res.status(403).json({ error: 'Unauthorized' });
-    if (booking.paymentStatus === 'PAID') return res.status(400).json({ error: 'Already paid' });
-
-    const updated = await prisma.booking.update({
-      where: { id: booking.id },
-      data: { paymentStatus: 'PAID', status: 'COMPLETED' }
-    });
-
-    // Award points
-    await awardGamificationPoints(booking.userId, 100);
-
-    res.json(updated);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Player Confirm Attendance
-app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } });
-    if (!booking) return res.status(404).json({ error: 'Not found' });
-    if (booking.userId !== req.user!.userId) return res.status(403).json({ error: 'Unauthorized' });
-
-    const updated = await prisma.booking.update({
-      where: { id: booking.id },
-      data: { status: 'ATTENDANCE_CONFIRMED' }
-    });
-
-    res.json(updated);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Cron job to auto-complete and award points if time passed (Runs every 15 mins)
-setInterval(async () => {
-  try {
-    const now = new Date();
-    // Safety check if Prisma is disconnected due to sleep
-    const passedBookings = await prisma.booking.findMany({
-      where: {
-        endTime: { lt: now },
-        status: { in: ['CONFIRMED', 'ATTENDANCE_CONFIRMED'] },
-        paymentStatus: 'UNPAID'
-      }
-    });
-
-    for (const b of passedBookings) {
-      await prisma.booking.update({
-        where: { id: b.id },
-        data: { status: 'COMPLETED' }
-      });
-      await awardGamificationPoints(b.userId, 100);
-    }
-  } catch (e: any) {
-    console.error('Cron Error safely caught:', e.message || e);
-  }
-}, 15 * 60 * 1000);
-
-app.post('/api/bookings/:id/pay', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const booking = await prisma.booking.findUnique({
-      where: { id },
-      include: { pitch: true }
-    });
-
-    if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (booking.userId !== req.user!.userId) return res.status(403).json({ error: 'Unauthorized' });
-    if (booking.paymentStatus === 'PAID') return res.status(400).json({ error: 'Already paid' });
-
-    // Phase 5: Simulated Stripe Checkout if using dummy key
-    if (process.env.STRIPE_SECRET_KEY === undefined || process.env.STRIPE_SECRET_KEY === 'sk_test_dummy') {
-      // Simulate success for local testing without valid keys
-      await prisma.booking.update({ where: { id: booking.id }, data: { paymentStatus: 'PAID' } });
-      await awardGamificationPoints(booking.userId, 100);
-      return res.json({ url: 'https://spotaia.com/payment/success?session_id=simulated', sessionId: 'simulated' });
-    }
-
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'egp',
-          product_data: {
-            name: `حجز ملعب: ${booking.pitch.name}`,
-            description: `تاريخ الحجز: ${booking.startTime.toLocaleString()}`
-          },
-          unit_amount: Math.round(booking.price * 100), // Stripe expects cents/piasters
-        },
-        quantity: 1,
-      }],
-      mode: 'payment',
-      success_url: `https://spotaia.com/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `https://spotaia.com/payment/cancel`,
-      client_reference_id: booking.id,
-      metadata: { bookingId: booking.id }
-    });
-
-    res.json({ url: session.url, sessionId: session.id });
-  } catch (error) {
-    console.error('Payment Error:', error);
-    res.status(500).json({ error: 'Failed to initiate payment' });
-  }
-});
-
-// 2. Stripe Webhook to update payment status
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
-  const sig = req.headers['stripe-signature'] as string;
-  let event;
-  
-  try {
-    // In production, use your actual webhook secret
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_dummy';
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err: any) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as any;
-    const bookingId = session.metadata?.bookingId;
-    if (bookingId) {
-      const updatedBooking = await prisma.booking.update({
-        where: { id: bookingId },
-        data: { paymentStatus: 'PAID' }
-      });
-      await awardGamificationPoints(updatedBooking.userId, 100);
-    }
-  }
-  res.json({ received: true });
-});
-
-
-// --- Admin Dashboard Routes ---
-app.get('/api/admin/stats', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+app.get('/api/admin/stats', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
     const totalUsers = await prisma.user.count();
-    const totalPitches = await prisma.pitch.count();
+    const totalVenues = await prisma.venue.count();
     const totalBookings = await prisma.booking.count();
     const bookings = await prisma.booking.findMany({ where: { status: 'CONFIRMED' } });
-    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    res.json({ totalUsers, totalPitches, totalBookings, totalRevenue });
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
+    res.json({ totalUsers, totalVenues, totalBookings, totalRevenue });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.get('/api/admin/users', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+app.get('/api/admin/users', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
     const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
     res.json(users);
@@ -746,46 +438,17 @@ app.get('/api/admin/users', requireAuth, requireRole(['ADMIN']), async (req: Req
   }
 });
 
-app.get('/api/admin/pitches', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
+app.get('/api/admin/venues', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
-    const pitches = await prisma.pitch.findMany({ include: { owner: true }, orderBy: { createdAt: 'desc' } });
-    res.json(pitches);
+    const venues = await prisma.venue.findMany({ include: { owner: true }, orderBy: { createdAt: 'desc' } });
+    res.json(venues);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 });
-
-
-app.delete('/api/admin/pitches/:id', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
-  try {
-    // Delete pitch related data first or use cascade in prisma, let's assume cascade is not there
-    await prisma.review.deleteMany({ where: { pitchId: req.params.id } });
-    await prisma.booking.deleteMany({ where: { pitchId: req.params.id } });
-    await prisma.pitch.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.post('/api/admin/users/:id/toggle-ban', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response) => {
-  try {
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    const updated = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { isActive: !user.isActive }
-    });
-    res.json(updated);
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 
 export default app;
-

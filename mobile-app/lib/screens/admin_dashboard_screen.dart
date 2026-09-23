@@ -243,13 +243,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   }
 
   Widget _buildPitchesTab() {
-    final pitchesAsync = ref.watch(adminPitchesProvider);
+    final pitchesAsync = ref.watch(adminVenuesProvider);
     return pitchesAsync.when(
       loading: () => Center(child: CircularProgressIndicator(color: AppTheme.neonBlue)),
       error: (e, st) => Center(child: Text('خطأ: $e', style: const TextStyle(color: Colors.white))),
       data: (pitches) {
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(adminPitchesProvider.future),
+          onRefresh: () => ref.refresh(adminVenuesProvider.future),
           child: ListView.builder(
             itemCount: pitches.length,
             itemBuilder: (context, index) {
@@ -299,7 +299,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                     if (confirm == true) {
                       try {
                         await ref.read(dioProvider).delete('/admin/pitches/${p['id']}');
-                        ref.refresh(adminPitchesProvider.future);
+                        ref.refresh(adminVenuesProvider.future);
                         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حذف الملعب')));
                       } catch(e) {}
                     }

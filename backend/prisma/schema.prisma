@@ -25,42 +25,54 @@ model User {
 
   bookings      Booking[]
   matchRequests MatchRequest[]
-  pitches       Pitch[]
+  venues        Venue[]
   reviews       Review[]
   notifications Notification[]
 }
 
-model Pitch {
-  id           String   @id @default(uuid())
-  category     String   @default("Football")
-  name         String
-  description  String
-  location     String
+model Venue {
+  id             String   @id @default(uuid())
+  name           String
+  description    String
+  location       String
   googleMapsLink String?
-  openTime     String   @default("14:00")
-  closeTime    String   @default("02:00")
-  surface      String
-  indoor       Boolean  @default(false)
-  amenities    String
+  openTime       String   @default("14:00")
+  closeTime      String   @default("02:00")
+  images         String
+  rating         Float    @default(0)
+  totalReviews   Int      @default(0)
+  isActive       Boolean  @default(true)
+  fcmToken       String?  
+  ownerId        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  owner    User      @relation(fields: [ownerId], references: [id])
+  courts   Court[]
+  reviews  Review[]
+}
+
+model Court {
+  id           String   @id @default(uuid())
+  venueId      String
+  name         String
+  category     String
+  description  String?
   pricePerHour Float
   images       String
-  rating       Float    @default(0)
-  totalReviews Int      @default(0)
+  amenities    String
   isActive     Boolean  @default(true)
-  fcmToken     String?  
-  ownerId      String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  owner    User      @relation(fields: [ownerId], references: [id])
+  venue    Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
   bookings Booking[]
-  reviews  Review[]
 }
 
 model Booking {
   id            String   @id @default(uuid())
   userId        String
-  pitchId       String
+  courtId       String
   startTime     DateTime
   endTime       DateTime
   price         Float
@@ -74,21 +86,21 @@ model Booking {
   updatedAt     DateTime @updatedAt
 
   user  User  @relation(fields: [userId], references: [id])
-  pitch Pitch @relation(fields: [pitchId], references: [id])
+  court Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
 
-  @@index([pitchId, startTime, endTime])
+  @@index([courtId, startTime, endTime])
   @@index([userId])
 }
 
 model Review {
   id        String   @id @default(uuid())
-  pitchId   String
+  venueId   String
   userId    String
   rating    Int
   comment   String?
   createdAt DateTime @default(now())
 
-  pitch Pitch @relation(fields: [pitchId], references: [id])
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id])
 }
 

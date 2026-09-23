@@ -11,8 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/api_provider.dart';
-import 'manage_pitch_screen.dart';
-import 'add_pitch_screen.dart';
+import 'manage_venue_screen.dart';
+import 'add_venue_screen.dart';
 import 'edit_profile_screen.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
@@ -125,7 +125,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                         'googleMapsLink': mapCtrl.text,
                         'amenities': 'كرة، حمامات، كشافات'
                       });
-                      ref.refresh(pitchesProvider);
+                      ref.refresh(venuesProvider);
                       if (mounted) Navigator.pop(ctx);
                     } catch (e) {
                       if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('خطأ: $e')));
@@ -215,7 +215,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final pitchesAsync = ref.watch(pitchesProvider);
+    final pitchesAsync = ref.watch(venuesProvider);
     final bookingsAsync = ref.watch(myBookingsProvider);
 
     return Scaffold(
@@ -258,7 +258,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppTheme.surfaceDark,
         foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPitchScreen())),
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddVenueScreen())),
         icon: const Icon(Icons.add),
         label: const Text('إضافة ملعب'),
       ),
@@ -281,18 +281,18 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                 const SizedBox(height: 24),
                 pitchesAsync.when(
                   data: (pitches) {
-                    final ownerPitches = pitches.where((p) => p['ownerId'] == user?['id']).toList();
-                    if (ownerPitches.isEmpty) return const Center(child: Text('لا توجد ملاعب. قم بإضافة ملعب جديد.'));
+                    final ownerVenues = pitches.where((p) => p['ownerId'] == user?['id']).toList();
+                    if (ownerVenues.isEmpty) return const Center(child: Text('لا توجد ملاعب. قم بإضافة ملعب جديد.'));
                     return ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: ownerPitches.length,
+                      itemCount: ownerVenues.length,
                       itemBuilder: (context, index) {
-                        final p = ownerPitches[index];
+                        final p = ownerVenues[index];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           child: ListTile(
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManagePitchScreen(pitch: p))),
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManageVenueScreen(venue: p))),
                             leading: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.network(
