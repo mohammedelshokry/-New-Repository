@@ -81,6 +81,41 @@ const requireRole = (roles: string[]) => {
   };
 };
 
+// --- File Upload Setup ---
+const uploadDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
+app.use('/uploads', express.static(uploadDir));
+
+app.post('/api/upload', requireAuth, upload.array('images', 5), (req: Request, res: Response) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      // res.status(400) removed because return is needed, fixing typescript error
+      res.status(400).json({ error: 'No files uploaded' });
+      return;
+    }
+    const filePaths = files.map(file => `/uploads/${file.filename}`);
+    res.json({ urls: filePaths });
+  } catch (error) {
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+// -------------------------
+
+
 app.post('/api/auth/register', async (req: Request, res: Response) => {
   try {
     const { name, phone, password, role } = req.body;
