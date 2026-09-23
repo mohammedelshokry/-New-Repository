@@ -57,7 +57,7 @@ class MapScreen extends ConsumerWidget {
                     width: 160,
                     height: 60,
                     child: GestureDetector(
-                      onTap: () => context.push('/pitch/$pitchId'),
+                      onTap: () => context.push('/venue/$pitchId'),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [

@@ -823,7 +823,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 2,
                     child: InkWell(
-                      onTap: () => context.push('/pitch/${pitch['id']}'),
+                      onTap: () => context.push('/venue/${pitch['id']}'),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [

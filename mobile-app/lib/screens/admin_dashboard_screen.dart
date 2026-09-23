@@ -306,7 +306,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                   },
                 ),
                 onTap: () {
-                  context.push('/pitch/${p['id']}');
+                  context.push('/venue/${p['id']}');
                 },
               );
             },

@@ -42,6 +42,7 @@ final isInitializedProvider = StateProvider<bool>((ref) => false);
 final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
+    redirect: (context, state) { if (state.matchedLocation == '/') return '/splash'; return null; },
     routes: [
       GoRoute(
         path: '/splash',
