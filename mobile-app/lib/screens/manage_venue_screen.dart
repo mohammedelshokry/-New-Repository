@@ -18,7 +18,7 @@ class ManageVenueScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppTheme.neonBlue,
         foregroundColor: Colors.black,
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddCourtScreen(venueId: venue['id']))),
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddCourtScreen(venueId: venue['id'], venueCategory: venue['category'] ?? 'كرة قدم'))),
         icon: const Icon(Icons.add),
         label: const Text('إضافة غرفة/ملعب'),
       ),

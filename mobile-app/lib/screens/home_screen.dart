@@ -796,12 +796,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           data: (pitches) {
             final filteredPitches = pitches.where((p) {
 
-              bool hasCategory = _selectedCategory == 'All';
-              if (!hasCategory && p['courts'] != null) {
-                for (var c in p['courts']) {
-                  if (c['category'] == _selectedCategory) hasCategory = true;
-                }
-              }
+              bool hasCategory = _selectedCategory == 'All' || p['category'] == _selectedCategory;
               if (!hasCategory) return false;
 
               final name = (p['name'] ?? '').toString().toLowerCase();

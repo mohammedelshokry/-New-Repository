@@ -32,6 +32,7 @@ model User {
 
 model Venue {
   id             String   @id @default(uuid())
+  category       String   @default("كرة قدم")
   name           String
   description    String
   location       String
