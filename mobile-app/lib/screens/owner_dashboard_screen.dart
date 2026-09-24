@@ -199,7 +199,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('${b['user']['name']} - ${b['court']?['name'] ?? 'ملعب'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${st.hour}:00 - ${et.hour}:00', style: const TextStyle(color: AppTheme.neonBlue)),
+              subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${st.hour.toString().padLeft(2, '0')}:${st.minute.toString().padLeft(2, '0')} - ${et.hour.toString().padLeft(2, '0')}:${et.minute.toString().padLeft(2, '0')}', style: const TextStyle(color: AppTheme.neonBlue)),
               trailing: Text('${b['ownerAmount']} ج.م', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             if (isPending)
