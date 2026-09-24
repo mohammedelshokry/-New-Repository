@@ -60,16 +60,22 @@ class VenueDetailsScreen extends ConsumerWidget {
                       Text(venue['name'], style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
                       const SizedBox(height: 8),
                       InkWell(
-                        onTap: () async {
-                          final lat = venue['latitude'];
-                          final lng = venue['longitude'];
-                          if (lat != null && lng != null) {
-                            final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(url, mode: LaunchMode.externalApplication);
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن فتح الخريطة')));
-                            }
+                                                onTap: () async {
+                          final loc = venue['location']?.toString() ?? '';
+                          String urlStr = '';
+                          if (venue['googleMapsLink'] != null && venue['googleMapsLink'].toString().isNotEmpty) {
+                            urlStr = venue['googleMapsLink'];
+                          } else if (loc.contains(',')) {
+                            urlStr = 'https://www.google.com/maps/search/?api=1&query=$loc';
+                          } else {
+                            urlStr = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(loc)}';
+                          }
+                          
+                          final url = Uri.parse(urlStr);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن فتح الخريطة')));
                           }
                         },
                         child: Row(
