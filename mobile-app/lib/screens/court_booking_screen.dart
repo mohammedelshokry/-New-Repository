@@ -32,8 +32,12 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
   List<String> _generateTimeSlots() {
     final bookings = widget.court['bookings'] as List? ?? [];
     List<String> slots = [];
-    int openHour = int.tryParse(widget.court['venue']['openTime'].split(':')[0]) ?? 10;
-    int closeHour = int.tryParse(widget.court['venue']['closeTime'].split(':')[0]) ?? 23;
+    int openHour = 10;
+    int closeHour = 23;
+    if (widget.venue != null) {
+      openHour = int.tryParse(widget.venue['openTime']?.split(':')[0] ?? '10') ?? 10;
+      closeHour = int.tryParse(widget.venue['closeTime']?.split(':')[0] ?? '23') ?? 23;
+    }
     if (closeHour <= openHour) closeHour += 24; // Handle past midnight
     
     for (int i = openHour; i < closeHour; i++) {
@@ -72,8 +76,12 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
       final parts = _selectedTime!.split(':');
       int selectedHour = int.parse(parts[0]);
       
-      int openHour = int.tryParse(widget.court['venue']['openTime'].split(':')[0]) ?? 10;
-      int closeHour = int.tryParse(widget.court['venue']['closeTime'].split(':')[0]) ?? 23;
+      int openHour = 10;
+    int closeHour = 23;
+    if (widget.venue != null) {
+      openHour = int.tryParse(widget.venue['openTime']?.split(':')[0] ?? '10') ?? 10;
+      closeHour = int.tryParse(widget.venue['closeTime']?.split(':')[0] ?? '23') ?? 23;
+    }
       if (closeHour <= openHour) closeHour += 24;
       
       bool isNextDay = false;
