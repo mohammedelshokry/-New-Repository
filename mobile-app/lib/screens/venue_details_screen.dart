@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
 import '../core/theme/app_theme.dart';
@@ -58,12 +59,26 @@ class VenueDetailsScreen extends ConsumerWidget {
                     children: [
                       Text(venue['name'], style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, color: AppTheme.neonOrange, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(venue['location'], style: const TextStyle(color: Colors.white70, fontSize: 16))),
-                        ],
+                      InkWell(
+                        onTap: () async {
+                          final lat = venue['latitude'];
+                          final lng = venue['longitude'];
+                          if (lat != null && lng != null) {
+                            final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن فتح الخريطة')));
+                            }
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on, color: AppTheme.neonOrange, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('${venue['location']} (اضغط لفتح الخريطة)', style: const TextStyle(color: AppTheme.neonBlue, fontSize: 16, decoration: TextDecoration.underline))),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(

@@ -87,7 +87,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
             padding: const EdgeInsets.all(16),
             children: [
               _buildStatCard('إجمالي المستخدمين', stats['totalUsers'].toString(), Icons.people, Colors.blue),
-              _buildStatCard('إجمالي الملاعب', stats['totalPitches'].toString(), Icons.stadium, Colors.green),
+              _buildStatCard('إجمالي الملاعب', stats['totalVenues'].toString(), Icons.stadium, Colors.green),
               _buildStatCard('إجمالي الحجوزات', stats['totalBookings'].toString(), Icons.calendar_month, Colors.orange),
               _buildStatCard('إجمالي الأرباح', '${stats['totalRevenue'] ?? 0} ج.م', Icons.attach_money, Colors.purple),
             ],

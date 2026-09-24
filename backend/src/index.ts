@@ -1,5 +1,6 @@
 // @ts-nocheck
 import express, { Request, Response, NextFunction } from 'express';
+import cron from 'node-cron';
 import Stripe from 'stripe';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -341,6 +342,7 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Prom
         userId: req.user!.userId,
         courtId,
         startTime: sTime,
+        status: 'PENDING',
         endTime: eTime,
         price,
         platformFee,
@@ -421,8 +423,12 @@ app.get('/api/admin/stats', requireAuth, requireRole(['ADMIN']), async (req: Req
     const totalUsers = await prisma.user.count();
     const totalVenues = await prisma.venue.count();
     const totalBookings = await prisma.booking.count();
-    const bookings = await prisma.booking.findMany({ where: { status: 'CONFIRMED' } });
-    const totalRevenue = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
+    // Only calculate revenue for bookings that are completed/attended or confirmed
+    const bookings = await prisma.booking.findMany({ where: { status: { in: ['CONFIRMED', 'ATTENDED', 'COMPLETED'] } } });
+    
+    // 5% commission for the admin
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.price || 0), 0) * 0.05;
+    
     res.json({ totalUsers, totalVenues, totalBookings, totalRevenue });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -458,6 +464,69 @@ app.get('/api/notifications', requireAuth, async (req: Request, res: Response): 
     res.json(notifs);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+// --- Attendance Confirmation ---
+app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const bookingId = req.params.id;
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { court: { include: { venue: true } } }
+    });
+    
+    if (!booking) {
+      res.status(404).json({ error: 'Booking not found' });
+      return;
+    }
+    
+    const updated = await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'CONFIRMED' }
+    });
+    
+    await prisma.notification.create({
+      data: {
+        userId: booking.court.venue.ownerId,
+        title: 'تأكيد حضور',
+        body: `قام اللاعب بتأكيد حضوره لحجز ${booking.court.name} (التاريخ: ${booking.date})`,
+        type: 'ATTENDANCE_CONFIRMED'
+      }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Cron Job for Reminders (Every hour) ---
+cron.schedule('0 * * * *', async () => {
+  try {
+    console.log('Running attendance reminder cron job...');
+    // Find upcoming bookings that are strictly PENDING (not yet CONFIRMED or CANCELLED)
+    const upcomingBookings = await prisma.booking.findMany({
+      where: {
+        status: 'PENDING'
+      },
+      include: { court: true }
+    });
+    
+    for (const b of upcomingBookings) {
+      // Just send a reminder notification to the player
+      await prisma.notification.create({
+        data: {
+          userId: b.userId,
+          title: 'تذكير تأكيد الحضور',
+          body: `برجاء تأكيد حضورك لحجز ${b.court.name} في أقرب وقت ليتمكن المالك من التجهيز.`,
+          type: 'ATTENDANCE_REMINDER'
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Cron job error:', e);
   }
 });
 
