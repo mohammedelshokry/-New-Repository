@@ -447,6 +447,20 @@ app.get('/api/admin/venues', requireAuth, requireRole(['ADMIN']), async (req: Re
   }
 });
 
+
+// --- Notifications ---
+app.get('/api/notifications', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const notifs = await prisma.notification.findMany({
+      where: { userId: req.user!.userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(notifs);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

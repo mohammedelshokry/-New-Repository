@@ -63,14 +63,33 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
         uploadedImageUrls = List<String>.from(uploadRes.data['urls'] ?? uploadRes.data['images'] ?? []);
       }
 
+
+      // Filter amenities based on category to prevent mixed UI artifacts
+      final Map<String, dynamic> filteredAmenities = {};
+      filteredAmenities['isAirConditioned'] = _amenities['isAirConditioned'];
+      
+      if (widget.venueCategory == 'بادل') {
+        filteredAmenities['courtType'] = _amenities['courtType'];
+        filteredAmenities['ballIncluded'] = _amenities['ballIncluded'];
+      } else if (widget.venueCategory == 'بلايستيشن') {
+        filteredAmenities['psConsole'] = _amenities['psConsole'];
+        filteredAmenities['psRoomType'] = _amenities['psRoomType'];
+      } else if (widget.venueCategory == 'بلياردو') {
+        filteredAmenities['billiardsType'] = _amenities['billiardsType'];
+      } else if (widget.venueCategory == 'كرة قدم') {
+        filteredAmenities['footballSize'] = _amenities['footballSize'];
+        filteredAmenities['ballIncluded'] = _amenities['ballIncluded'];
+      }
+
       final payload = {
         'name': _nameCtrl.text,
         'category': widget.venueCategory, // Sub-room inherits the venue's category
         'description': _descCtrl.text,
         'pricePerHour': double.tryParse(_priceCtrl.text) ?? 100,
         'images': uploadedImageUrls,
-        'amenities': jsonEncode(_amenities),
+        'amenities': jsonEncode(filteredAmenities),
       };
+
 
       await dio.post('/venues/${widget.venueId}/courts', data: payload);
       ref.refresh(venueDetailsProvider(widget.venueId));

@@ -111,12 +111,13 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                   const Text('مواصفات وتجهيزات:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.neonBlue)),
                   const SizedBox(height: 8),
                   if (amenities.isNotEmpty) ...[
-                    if (amenities['psConsole'] != null) Text('الجهاز: ${amenities['psConsole']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    if (amenities['psRoomType'] != null) Text('النوع: ${amenities['psRoomType'] ?? amenities['courtType'] ?? ''}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    if (amenities['footballSize'] != null) Text('المساحة: ${amenities['footballSize']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    if (amenities['billiardsType'] != null) Text('النوع: ${amenities['billiardsType']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (widget.court['category'] == 'بلايستيشن' && amenities['psConsole'] != null) Text('الجهاز: ${amenities['psConsole']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (widget.court['category'] == 'بلايستيشن' && amenities['psRoomType'] != null) Text('النوع: ${amenities['psRoomType']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (widget.court['category'] == 'بادل' && amenities['courtType'] != null) Text('النوع: ${amenities['courtType']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (widget.court['category'] == 'كرة قدم' && amenities['footballSize'] != null) Text('المساحة: ${amenities['footballSize']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (widget.court['category'] == 'بلياردو' && amenities['billiardsType'] != null) Text('النوع: ${amenities['billiardsType']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
                     Text(amenities['isAirConditioned'] == true ? 'مكيف ❄️' : 'غير مكيف', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    if (amenities['ballIncluded'] == true) const Text('كرة مجانية مع الحجز ⚽', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    if ((widget.court['category'] == 'كرة قدم' || widget.court['category'] == 'بادل') && amenities['ballIncluded'] == true) const Text('كرة مجانية مع الحجز ⚽', style: TextStyle(color: Colors.white, fontSize: 16)),
                   ],
                   const SizedBox(height: 24),
 
