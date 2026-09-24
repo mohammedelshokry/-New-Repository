@@ -7,6 +7,14 @@ import '../providers/api_provider.dart';
 import '../core/theme/app_theme.dart';
 import 'dart:convert';
 
+String getFullUrl(String url) {
+  if (url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return 'http://192.168.1.10:3001$url';
+  return 'http://192.168.1.10:3001/$url';
+}
+
+
 class CourtBookingScreen extends ConsumerStatefulWidget {
   final dynamic court;
   final dynamic venue;
@@ -86,7 +94,7 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                 options: CarouselOptions(height: 250.0, enableInfiniteScroll: false, enlargeCenterPage: true),
                 items: images.map((url) => ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(url, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => Container(color: Colors.grey)),
+                  child: Image.network(getFullUrl(url), fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => Container(color: Colors.grey)),
                 )).toList(),
               )
             else

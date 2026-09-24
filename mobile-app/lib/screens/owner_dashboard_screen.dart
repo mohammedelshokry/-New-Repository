@@ -15,6 +15,14 @@ import 'manage_venue_screen.dart';
 import 'add_venue_screen.dart';
 import 'edit_profile_screen.dart';
 
+String getFullUrl(String url) {
+  if (url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return 'http://192.168.1.10:3001$url';
+  return 'http://192.168.1.10:3001/$url';
+}
+
+
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
 
@@ -295,8 +303,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManageVenueScreen(venue: p))),
                             leading: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                (p['images'] is List && (p['images'] as List).isNotEmpty) ? p['images'][0] : (p['images'] is String && (p['images'] as String).isNotEmpty && !(p['images'] as String).startsWith('[')) ? p['images'] : 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&q=80&w=800',
+                              child: Image.network(getFullUrl(
+                                (p['images'] is List && (p['images'] as List).isNotEmpty) ? p['images'][0] : (p['images'] is String && (p['images'] as String).isNotEmpty && !(p['images'] as String).startsWith('[')) ? p['images'] : 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&q=80&w=800'),
                                 width: 60, height: 60, fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => const Icon(Icons.stadium, size: 40),
                               ),

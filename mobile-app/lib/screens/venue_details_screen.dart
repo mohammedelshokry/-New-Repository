@@ -6,6 +6,14 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'court_booking_screen.dart';
 
+String getFullUrl(String url) {
+  if (url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return 'http://192.168.1.10:3001$url';
+  return 'http://192.168.1.10:3001/$url';
+}
+
+
 class VenueDetailsScreen extends ConsumerWidget {
   final String venueId;
   const VenueDetailsScreen({super.key, required this.venueId});
@@ -38,7 +46,7 @@ class VenueDetailsScreen extends ConsumerWidget {
                 if (images.isNotEmpty)
                   CarouselSlider(
                     options: CarouselOptions(height: 300.0, autoPlay: true, viewportFraction: 1.0),
-                    items: images.map((url) => Image.network(url, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => Container(color: Colors.grey))).toList(),
+                    items: images.map((url) => Image.network(getFullUrl(url), fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => Container(color: Colors.grey))).toList(),
                   )
                 else
                   Container(height: 300, color: Colors.grey, child: const Icon(Icons.business, size: 80)),
@@ -91,7 +99,7 @@ class VenueDetailsScreen extends ConsumerWidget {
                                   ClipRRect(
                                     borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
                                     child: courtImages.isNotEmpty 
-                                      ? Image.network(courtImages[0], width: 120, height: 120, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 120, height: 120, color: Colors.grey))
+                                      ? Image.network(getFullUrl(courtImages[0]), width: 120, height: 120, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 120, height: 120, color: Colors.grey))
                                       : Container(width: 120, height: 120, color: Colors.grey, child: const Icon(Icons.sports_soccer)),
                                   ),
                                   Expanded(

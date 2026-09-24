@@ -6,6 +6,14 @@ import 'package:dio/dio.dart';
 import '../providers/api_provider.dart';
 import '../core/theme/app_theme.dart';
 
+String getFullUrl(String url) {
+  if (url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return 'http://192.168.1.10:3001$url';
+  return 'http://192.168.1.10:3001/$url';
+}
+
+
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
   @override
@@ -84,7 +92,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     backgroundColor: AppTheme.surfaceLighter,
                     backgroundImage: _selectedImage != null
                         ? FileImage(File(_selectedImage!.path)) as ImageProvider
-                        : (currentPic != null ? NetworkImage(currentPic) : null),
+                        : (currentPic != null ? NetworkImage(getFullUrl(currentPic)) : null),
                     child: (_selectedImage == null && currentPic == null)
                         ? const Icon(Icons.person, size: 60, color: Colors.white54)
                         : null,

@@ -6,6 +6,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/api_provider.dart';
 import '../core/theme/app_theme.dart';
 
+String getFullUrl(String url) {
+  if (url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return 'http://192.168.1.10:3001$url';
+  return 'http://192.168.1.10:3001/$url';
+}
+
+
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
   @override
@@ -269,7 +277,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                     borderRadius: BorderRadius.circular(8),
                     color: AppTheme.surfaceLighter,
                     image: images.isNotEmpty
-                      ? DecorationImage(image: NetworkImage(images[0]), fit: BoxFit.cover)
+                      ? DecorationImage(image: NetworkImage(getFullUrl(images[0])), fit: BoxFit.cover)
                       : null,
                   ),
                   child: images.isEmpty

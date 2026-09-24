@@ -15,6 +15,14 @@ import '../providers/api_provider.dart';
 import 'add_match_request_screen.dart';
 import 'edit_profile_screen.dart';
 
+String getFullUrl(String url) {
+  if (url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return 'http://192.168.1.10:3001$url';
+  return 'http://192.168.1.10:3001/$url';
+}
+
+
 
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -168,7 +176,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       title: Text(user['name'] ?? 'لاعب', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
                       subtitle: Text('${user['level']} - ${user['points']} نقطة', style: const TextStyle(color: AppTheme.neonBlue)),
                       trailing: user['profilePic'] != null
-                          ? CircleAvatar(backgroundImage: NetworkImage(user['profilePic']))
+                          ? CircleAvatar(backgroundImage: NetworkImage(getFullUrl(user['profilePic'])))
                           : const CircleAvatar(backgroundColor: Colors.black, child: Icon(Icons.person, color: Colors.white)),
                     ),
                   ).animate().fade(duration: 400.ms, delay: (50 * index).ms).slideX(begin: 0.2);
@@ -225,7 +233,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     CircleAvatar(
                       radius: 40,
                       backgroundColor: badgeColor.withValues(alpha: 0.2),
-                      backgroundImage: user['profilePic'] != null ? NetworkImage(user['profilePic']) : null,
+                      backgroundImage: user['profilePic'] != null ? NetworkImage(getFullUrl(user['profilePic'])) : null,
                       child: user['profilePic'] == null ? Icon(Icons.person, size: 40, color: badgeColor) : null,
                     ),
                     Container(
@@ -633,7 +641,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundImage: creator['profilePic'] != null ? NetworkImage(creator['profilePic']) : null,
+                          backgroundImage: creator['profilePic'] != null ? NetworkImage(getFullUrl(creator['profilePic'])) : null,
                           backgroundColor: badgeColor,
                           child: creator['profilePic'] == null ? const Icon(Icons.person, color: Colors.black) : null,
                         ),
@@ -830,7 +838,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Hero(
                             tag: 'pitch_image_${pitch['id']}',
                             child: CachedNetworkImage(
-                              imageUrl: imgUrl,
+                              imageUrl: getFullUrl(imgUrl),
                               height: 180,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Shimmer.fromColors(
