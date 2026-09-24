@@ -342,7 +342,7 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Prom
         userId: req.user!.userId,
         courtId,
         startTime: sTime,
-        status: 'PENDING',
+        status: 'CONFIRMED',
         endTime: eTime,
         price,
         platformFee,
@@ -479,7 +479,7 @@ app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Reques
     const bookingId = req.params.id;
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { court: { include: { venue: true } } }
+      include: { court: { include: { venue: { include: { owner: true } } } }, user: true }
     });
     
     if (!booking) {
@@ -495,12 +495,21 @@ app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Reques
     await prisma.notification.create({
       data: {
         userId: booking.court.venue.ownerId,
-        title: 'تأكيد حضور',
-        body: `قام اللاعب بتأكيد حضوره لحجز ${booking.court.name} (التاريخ: ${booking.date})`,
+        title: 'تأكيد حضور اللاعب ✅',
+        body: `قام اللاعب ${booking.user.name} بتأكيد حضوره لحجز ${booking.court.name} (الموعد: ${booking.startTime.toLocaleDateString()} ${booking.startTime.getHours()}:00)`,
         type: 'ATTENDANCE_CONFIRMED'
       }
     });
-
+    
+    if (booking.court.venue.owner.fcmToken) {
+      try {
+        await admin.messaging().send({ 
+          token: booking.court.venue.owner.fcmToken, 
+          notification: { title: 'تأكيد حضور اللاعب ✅', body: `قام اللاعب ${booking.user.name} بتأكيد حضوره لحجز ${booking.court.name}` } 
+        });
+      } catch (e) {}
+    }
+    
     res.json(updated);
   } catch (error) {
     console.error(error); res.status(500).json({ error: 'Server error' });
@@ -508,27 +517,42 @@ app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Reques
 });
 
 // --- Cron Job for Reminders (Every hour) ---
-cron.schedule('0 * * * *', async () => {
+cron.schedule('*/30 * * * *', async () => {
   try {
     console.log('Running attendance reminder cron job...');
-    // Find upcoming bookings that are strictly PENDING (not yet CONFIRMED or CANCELLED)
+    const now = new Date();
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    // Find upcoming bookings that are CONFIRMED and within the next 2 hours
     const upcomingBookings = await prisma.booking.findMany({
       where: {
-        status: 'PENDING'
+        status: 'CONFIRMED',
+        startTime: {
+          gt: now,
+          lte: twoHoursFromNow
+        }
       },
-      include: { court: true }
+      include: { court: true, user: true }
     });
     
     for (const b of upcomingBookings) {
-      // Just send a reminder notification to the player
       await prisma.notification.create({
         data: {
           userId: b.userId,
-          title: 'تذكير تأكيد الحضور',
-          body: `برجاء تأكيد حضورك لحجز ${b.court.name} في أقرب وقت ليتمكن المالك من التجهيز.`,
+          title: 'تأكيد الحضور ضروري ⚠️',
+          body: `متبقي أقل من ساعتين على حجزك في ${b.court.name}! برجاء الدخول وتأكيد الحضور الآن لضمان الحجز وعدم إلغائه.`,
           type: 'ATTENDANCE_REMINDER'
         }
       });
+      
+      if (b.user.fcmToken) {
+        try {
+          await admin.messaging().send({ 
+            token: b.user.fcmToken, 
+            notification: { title: 'تأكيد الحضور ضروري ⚠️', body: `متبقي أقل من ساعتين على حجزك في ${b.court.name}! برجاء الدخول وتأكيد الحضور الآن لضمان الحجز وعدم إلغائه.` } 
+          });
+        } catch (e) {}
+      }
     }
   } catch (e) {
     console.error('Cron job error:', e);

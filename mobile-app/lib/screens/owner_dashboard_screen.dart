@@ -194,26 +194,36 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text('${b['user']['name']} - ${b['pitch']['name']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              title: Text('${b['user']['name']} - ${b['court']?['name'] ?? 'ملعب'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${st.hour}:00 - ${et.hour}:00', style: const TextStyle(color: AppTheme.neonBlue)),
               trailing: Text('${b['ownerAmount']} ج.م', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             if (isPending)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => _updateBookingStatus(b['id'], 'REJECTED'),
-                    child: const Text('رفض', style: TextStyle(color: Colors.red)),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black),
-                    onPressed: () => _updateBookingStatus(b['id'], 'CONFIRMED'),
-                    child: const Text('قبول الحجز', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              )
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => _updateBookingStatus(b['id'], 'REJECTED'),
+                              child: const Text('رفض', style: TextStyle(color: Colors.red)),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black),
+                              onPressed: () => _updateBookingStatus(b['id'], 'CONFIRMED'),
+                              child: const Text('قبول الحجز', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        )
+                      else if (b['status'] == 'CONFIRMED' || b['status'] == 'ATTENDANCE_CONFIRMED')
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => _updateBookingStatus(b['id'], 'REJECTED'),
+                              child: const Text('إلغاء الحجز', style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        )
           ],
         ),
       ),
@@ -310,8 +320,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                               ),
                             ),
                             title: Text(p['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('${p['location']} • ${p['surface']}'),
-                            trailing: Text('${p['pricePerHour']} ج.م/ساعة', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  subtitle: Text('${p['location']} • ${(p['courts'] as List?)?.length ?? 0} ملاعب'),
+                  trailing: Text('إدارة المكان', style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold)),
                           ),
                         );
                       },

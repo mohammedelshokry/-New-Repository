@@ -310,10 +310,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     statusColor = Colors.amber;
                     statusText = 'بانتظار قبول المالك';
                   } else if (status == 'CONFIRMED') {
-                    statusColor = AppTheme.neonOrange;
-                    statusText = 'تم القبول (بانتظار حضورك)';
-                    showConfirmBtn = true;
-                  } else if (status == 'ATTENDANCE_CONFIRMED') {
+        statusColor = AppTheme.neonOrange;
+        statusText = 'تم القبول (بانتظار حضورك)';
+        if (booking['startTime'] != null) {
+          final st = DateTime.parse(booking['startTime']).toLocal();
+          final diff = st.difference(DateTime.now()).inHours;
+          if (diff <= 2 && diff >= -1) {
+            showConfirmBtn = true;
+          }
+        }
+      } else if (status == 'ATTENDANCE_CONFIRMED') {
                     statusColor = Colors.greenAccent;
                     statusText = 'تم تأكيد الحضور (الدفع كاش)';
                   }
