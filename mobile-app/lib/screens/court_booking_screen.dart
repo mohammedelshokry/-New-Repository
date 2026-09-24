@@ -65,10 +65,8 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
         }
       }
       
-      if (!isBooked) {
-          final timeStr = DateFormat('h:00 a').format(DateTime(2023, 1, 1, realHour, 0)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
-          slots.add({'val': '${realHour.toString().padLeft(2, '0')}:00', 'label': timeStr});
-        }
+      final timeStr = DateFormat('h:00 a').format(DateTime(2023, 1, 1, realHour, 0)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
+      slots.add({'val': '${realHour.toString().padLeft(2, '0')}:00', 'label': timeStr, 'isBooked': isBooked});
     }
     return slots;
   }
