@@ -343,8 +343,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           const SizedBox(height: 4),
                           Text(
-                              booking['startTime'] != null
-                                ? "${DateTime.parse(booking['startTime']).toLocal().year}-${DateTime.parse(booking['startTime']).toLocal().month.toString().padLeft(2, '0')}-${DateTime.parse(booking['startTime']).toLocal().day.toString().padLeft(2, '0')} ${DateFormat('h:mm a').format(DateTime.parse(booking['startTime']).toLocal()).replaceAll('AM', 'ص').replaceAll('PM', 'م')}"
+                              booking['startTime'] != null && booking['endTime'] != null
+                                ? "${DateTime.parse(booking['startTime']).toLocal().year}-${DateTime.parse(booking['startTime']).toLocal().month.toString().padLeft(2, '0')}-${DateTime.parse(booking['startTime']).toLocal().day.toString().padLeft(2, '0')} | ${DateFormat('h:mm a').format(DateTime.parse(booking['startTime']).toLocal()).replaceAll('AM', 'ص').replaceAll('PM', 'م')} - ${DateFormat('h:mm a').format(DateTime.parse(booking['endTime']).toLocal()).replaceAll('AM', 'ص').replaceAll('PM', 'م')}"
                                 : '', 
                               style: const TextStyle(color: Colors.white70, fontSize: 12)
                             ),

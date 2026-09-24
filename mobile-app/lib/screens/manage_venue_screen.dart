@@ -66,10 +66,58 @@ class ManageVenueScreen extends ConsumerWidget {
                 child: ListTile(
                   title: Text(c['name'], style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                   subtitle: Text('${c['category']} - ${c['pricePerHour']} ج.م/ساعة'),
-                  trailing: const Icon(Icons.calendar_month, color: AppTheme.neonBlue),
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => CourtScheduleScreen(venue: details, court: c)));
-                  },
+                  trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.orange),
+                                  onPressed: () {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => AddCourtScreen(venueId: venue['id'], venueCategory: venue['category'] ?? 'كرة قدم', existingCourt: c)));
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        backgroundColor: AppTheme.surfaceDark,
+                                        title: const Text('تأكيد الحذف', style: TextStyle(color: Colors.red)),
+                                        content: const Text('هل أنت متأكد من حذف هذه الغرفة/الملعب بشكل نهائي؟ سيتم حذف جميع الحجوزات المتعلقة بها.', style: TextStyle(color: Colors.white)),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء', style: TextStyle(color: Colors.grey))),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                            onPressed: () => Navigator.pop(ctx, true),
+                                            child: const Text('نعم، احذف', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      try {
+                                        final dio = ref.read(dioProvider);
+                                        await dio.delete('/courts/${c['id']}');
+                                        ref.invalidate(venueDetailsProvider(venue['id']));
+                                        ref.invalidate(venuesProvider);
+                                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم الحذف بنجاح')));
+                                      } catch (e) {
+                                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+                                      }
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.calendar_month, color: AppTheme.neonBlue),
+                                  onPressed: () {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => CourtScheduleScreen(venue: details, court: c)));
+                                  },
+                                ),
+                              ],
+                            ),
+                            onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => CourtScheduleScreen(venue: details, court: c)));
+                            },
                 ),
               )),
             ],

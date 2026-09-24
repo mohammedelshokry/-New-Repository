@@ -314,6 +314,24 @@ app.patch('/api/courts/:id', requireAuth, requireRole(['OWNER', 'ADMIN']), async
   }
 });
 
+
+app.delete('/api/courts/:id', requireAuth, requireRole(['OWNER', 'ADMIN']), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const courtId = req.params.id;
+    const court = await prisma.court.findUnique({ where: { id: courtId }, include: { venue: true } });
+    if (!court || court.venue.ownerId !== req.user!.userId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    await prisma.booking.deleteMany({ where: { courtId } });
+    await prisma.court.delete({ where: { id: courtId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.get('/api/courts/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const court = await prisma.court.findUnique({
