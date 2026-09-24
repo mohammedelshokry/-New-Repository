@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,18 @@ String getFullUrl(String url) {
 class VenueDetailsScreen extends ConsumerWidget {
   final String venueId;
   const VenueDetailsScreen({super.key, required this.venueId});
+
+  
+  String formatTime(String? time) {
+    if (time == null || time.isEmpty) return '';
+    try {
+      final parts = time.split(':');
+      final dt = DateTime(2023, 1, 1, int.parse(parts[0]), int.parse(parts[1]));
+      return DateFormat('h:mm a').format(dt).replaceAll('AM', 'ص').replaceAll('PM', 'م');
+    } catch (_) {
+      return time;
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,7 +104,7 @@ class VenueDetailsScreen extends ConsumerWidget {
                         children: [
                           const Icon(Icons.access_time, color: AppTheme.neonBlue, size: 20),
                           const SizedBox(width: 8),
-                          Text('مفتوح: ${venue['openTime']} - ${venue['closeTime']}', style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                          Text('مفتوح: ${formatTime(venue['openTime'])} - ${formatTime(venue['closeTime'])}', style: const TextStyle(color: Colors.white70, fontSize: 16)),
                         ],
                       ),
                       const SizedBox(height: 16),

@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shimmer/shimmer.dart';
@@ -343,7 +344,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const SizedBox(height: 4),
                           Text(
                               booking['startTime'] != null
-                                ? "${DateTime.parse(booking['startTime']).toLocal().year}-${DateTime.parse(booking['startTime']).toLocal().month.toString().padLeft(2, '0')}-${DateTime.parse(booking['startTime']).toLocal().day.toString().padLeft(2, '0')} ${DateTime.parse(booking['startTime']).toLocal().hour.toString().padLeft(2, '0')}:${DateTime.parse(booking['startTime']).toLocal().minute.toString().padLeft(2, '0')}"
+                                ? "${DateTime.parse(booking['startTime']).toLocal().year}-${DateTime.parse(booking['startTime']).toLocal().month.toString().padLeft(2, '0')}-${DateTime.parse(booking['startTime']).toLocal().day.toString().padLeft(2, '0')} ${DateFormat('h:mm a').format(DateTime.parse(booking['startTime']).toLocal()).replaceAll('AM', 'ص').replaceAll('PM', 'م')}"
                                 : '', 
                               style: const TextStyle(color: Colors.white70, fontSize: 12)
                             ),

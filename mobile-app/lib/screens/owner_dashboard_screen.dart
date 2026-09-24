@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -199,7 +200,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('${b['user']['name']} - ${b['court']?['name'] ?? 'ملعب'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${st.hour.toString().padLeft(2, '0')}:${st.minute.toString().padLeft(2, '0')} - ${et.hour.toString().padLeft(2, '0')}:${et.minute.toString().padLeft(2, '0')}', style: const TextStyle(color: AppTheme.neonBlue)),
+              subtitle: Text('${st.year}-${st.month.toString().padLeft(2,'0')}-${st.day.toString().padLeft(2,'0')} | ${DateFormat('h:mm a').format(st).replaceAll('AM', 'ص').replaceAll('PM', 'م')} - ${DateFormat('h:mm a').format(et).replaceAll('AM', 'ص').replaceAll('PM', 'م')}', style: const TextStyle(color: AppTheme.neonBlue)),
               trailing: Text('${b['ownerAmount']} ج.م', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             if (isPending)

@@ -33,6 +33,7 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
   };
 
   List<XFile> _selectedImages = [];
+  List<String> _networkImages = [];
   bool _isLoading = false;
 
   @override
@@ -41,6 +42,14 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
     if (widget.existingCourt != null) {
       _nameCtrl.text = widget.existingCourt['name'] ?? '';
       _priceCtrl.text = widget.existingCourt['pricePerHour']?.toString() ?? '';
+      if (widget.existingCourt['images'] != null) {
+        final imgs = widget.existingCourt['images'];
+        if (imgs is List) {
+          _networkImages = List<String>.from(imgs);
+        } else if (imgs is String) {
+          try { _networkImages = List<String>.from(jsonDecode(imgs)); } catch(e) {}
+        }
+      }
       if (widget.existingCourt['amenities'] != null) {
         try {
                     final parsed = widget.existingCourt['amenities'] is String 
@@ -104,42 +113,51 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
         'category': widget.venueCategory, // Sub-room inherits the venue's category
         'description': _descCtrl.text,
         'pricePerHour': double.tryParse(_priceCtrl.text) ?? 100,
-        'images': uploadedImageUrls,
+        'images': [..._networkImages, ...uploadedImageUrls],
         'amenities': jsonEncode(filteredAmenities),
       };
 
-
-      await dio.post('/venues/${widget.venueId}/courts', data: payload);
+      if (widget.existingCourt != null) {
+        await dio.patch('/courts/${widget.existingCourt['id']}', data: payload);
+      } else {
+        await dio.post('/venues/${widget.venueId}/courts', data: payload);
+      }
+      
       ref.refresh(venueDetailsProvider(widget.venueId));
       ref.refresh(venuesProvider);
       
       if (mounted) {
         showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: AppTheme.surfaceDark,
-            title: const Text('تمت الإضافة بنجاح', style: TextStyle(color: AppTheme.neonBlue)),
-            content: const Text('هل تريد إضافة غرفة/ملعب آخر في نفس المكان؟', style: TextStyle(color: Colors.white)),
-            actions: [
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.surfaceDark,
+          title: Text(widget.existingCourt != null ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح', style: const TextStyle(color: AppTheme.neonBlue)),
+          content: Text(widget.existingCourt != null ? 'تم تحديث بيانات الغرفة/الملعب.' : 'هل تريد إضافة غرفة/ملعب آخر في نفس المكان؟', style: const TextStyle(color: Colors.white)),
+          actions: [
+            if (widget.existingCourt == null)
               TextButton(
                 onPressed: () {
-                  Navigator.pop(ctx); // close dialog
-                  Navigator.pop(context); // go back to dashboard
+                  Navigator.pop(ctx);
+                  Navigator.pop(context);
                 },
                 child: const Text('لا، اكتفيت', style: TextStyle(color: Colors.grey)),
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _resetForm(); // allow adding another
-                },
-                child: const Text('نعم، إضافة المزيد'),
-              ),
-            ],
-          ),
-        );
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black),
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (widget.existingCourt == null) {
+                  _resetForm();
+                } else {
+                  Navigator.pop(context); // just go back if edited
+                }
+              },
+              child: Text(widget.existingCourt != null ? 'حسناً' : 'نعم، إضافة المزيد'),
+            ),
+          ],
+        ),
+      );
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));

@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_theme.dart';
@@ -9,6 +10,18 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 class ManageVenueScreen extends ConsumerWidget {
   final dynamic venue;
   const ManageVenueScreen({super.key, required this.venue});
+
+  
+  String formatTime(String? time) {
+    if (time == null || time.isEmpty) return '';
+    try {
+      final parts = time.split(':');
+      final dt = DateTime(2023, 1, 1, int.parse(parts[0]), int.parse(parts[1]));
+      return DateFormat('h:mm a').format(dt).replaceAll('AM', 'ص').replaceAll('PM', 'م');
+    } catch (_) {
+      return time;
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,7 +51,7 @@ class ManageVenueScreen extends ConsumerWidget {
                       Text('المعلومات الأساسية', style: TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Text('الموقع: ${details['location']}'),
-                      Text('ساعات العمل: ${details['openTime']} - ${details['closeTime']}'),
+                      Text('ساعات العمل: ${formatTime(details['openTime'])} - ${formatTime(details['closeTime'])}'),
                     ],
                   ),
                 ),

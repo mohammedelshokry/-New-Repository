@@ -292,6 +292,28 @@ app.post('/api/venues/:id/courts', requireAuth, requireRole(['OWNER', 'ADMIN']),
   }
 });
 
+
+app.patch('/api/courts/:id', requireAuth, requireRole(['OWNER', 'ADMIN']), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const courtId = req.params.id;
+    const court = await prisma.court.findUnique({ where: { id: courtId }, include: { venue: true } });
+    if (!court || court.venue.ownerId !== req.user!.userId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    const payload = { ...req.body };
+    if (Array.isArray(payload.images)) payload.images = JSON.stringify(payload.images);
+    if (Array.isArray(payload.amenities) || typeof payload.amenities === 'object') {
+      payload.amenities = JSON.stringify(payload.amenities);
+    }
+    const updatedCourt = await prisma.court.update({ where: { id: courtId }, data: payload });
+    res.json(updatedCourt);
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Invalid data' });
+  }
+});
+
 app.get('/api/courts/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const court = await prisma.court.findUnique({
