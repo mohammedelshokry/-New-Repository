@@ -153,7 +153,7 @@ class _AddMatchRequestScreenState extends ConsumerState<AddMatchRequestScreen> {
             OutlinedButton.icon(
               onPressed: _pickDateTime,
               icon: const Icon(Icons.calendar_month, color: AppTheme.neonBlue),
-              label: Text('موعد المباراة: \${_selectedDate.year}-\${_selectedDate.month}-\${_selectedDate.day}',
+              label: Text('موعد المباراة: ${_selectedDate.year}-${_selectedDate.month}-${_selectedDate.day}',
                 style: const TextStyle(color: Colors.white)),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),

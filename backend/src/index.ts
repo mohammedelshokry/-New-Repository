@@ -484,7 +484,7 @@ app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Reques
     
     const updated = await prisma.booking.update({
       where: { id: bookingId },
-      data: { status: 'CONFIRMED' }
+      data: { status: 'ATTENDANCE_CONFIRMED' }
     });
     
     await prisma.notification.create({
