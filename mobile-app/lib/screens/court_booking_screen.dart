@@ -66,7 +66,7 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
       }
       
       final timeStr = DateFormat('h:00 a').format(DateTime(2023, 1, 1, realHour, 0)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
-      slots.add({'val': '${realHour.toString().padLeft(2, '0')}:00', 'label': timeStr, 'isBooked': isBooked});
+      slots.add({'val': '${realHour.toString().padLeft(2, '0')}:00', 'label': timeStr, 'isBooked': isBooked, 'absHour': i});
     }
     return slots;
   }
@@ -95,7 +95,8 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
       
       final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
       final start = DateTime(targetDate.year, targetDate.month, targetDate.day, selectedHour, 0);
-      final end = start.add(const Duration(hours: 1));
+      final durationMinutes = (_durationHours * 60).toInt();
+      final end = start.add(Duration(minutes: durationMinutes));
 
       final dio = ref.read(dioProvider);
       await dio.post('/bookings', data: {
@@ -208,16 +209,40 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                   Wrap(
                     spacing: 12, runSpacing: 12,
                     children: slots.map((timeMap) {
-                      final timeVal = timeMap['val'];
+                      final timeVal = timeMap['val'] as String;
                       final timeLabel = timeMap['label'];
-                      final isSelected = _selectedTime == timeVal;
+                      final isBooked = timeMap['isBooked'] == true;
+                      final absHour = timeMap['absHour'] as int;
+                      
+                      bool isSelected = false;
+                      if (_selectedTime != null) {
+                        // Find the selected slot's absHour
+                        final selSlot = slots.firstWhere((s) => s['val'] == _selectedTime, orElse: () => slots.first);
+                        final selAbsHour = selSlot['absHour'] as int;
+                        
+                        int selEndAbsHour = selAbsHour + _durationHours.toInt();
+                        if (_durationHours % 1 != 0) selEndAbsHour += 1;
+                        
+                        if (absHour >= selAbsHour && absHour < selEndAbsHour) {
+                          isSelected = true;
+                        }
+                      }
+                      
                       return ChoiceChip(
-                        label: Text(timeLabel),
-                        selected: isSelected,
-                        onSelected: (val) => setState(() => _selectedTime = val ? timeVal : null),
+                        label: Text(isBooked ? '$timeLabel (محجوز)' : timeLabel, style: TextStyle(color: isBooked ? Colors.white54 : (isSelected ? Colors.black : Colors.white))),
+                        selected: isSelected && !isBooked,
+                        onSelected: isBooked ? null : (val) {
+                          setState(() {
+                            if (val) {
+                              _selectedTime = timeVal;
+                            } else {
+                              _selectedTime = null;
+                            }
+                          });
+                        },
                         selectedColor: AppTheme.neonOrange,
-                        backgroundColor: AppTheme.surfaceDark,
-                        labelStyle: TextStyle(color: isSelected ? Colors.black : Colors.white),
+                        backgroundColor: isBooked ? Colors.grey.withOpacity(0.3) : AppTheme.surfaceDark,
+                        disabledColor: Colors.red.withOpacity(0.2),
                       );
                     }).toList(),
                   ),

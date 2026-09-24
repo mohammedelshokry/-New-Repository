@@ -351,7 +351,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                 if (ownerBookings.isEmpty) return const Center(child: Text('لا توجد حجوزات', style: TextStyle(color: Colors.white)));
 
                 final pending = ownerBookings.where((b) => b['status'] == 'PENDING').toList();
-                final confirmed = ownerBookings.where((b) => b['status'] == 'CONFIRMED').toList();
+                final confirmed = ownerBookings.where((b) => b['status'] == 'CONFIRMED' || b['status'] == 'ATTENDANCE_CONFIRMED' || b['status'] == 'COMPLETED').toList();
 
               return ListView(
                 padding: const EdgeInsets.all(16),

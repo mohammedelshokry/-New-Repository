@@ -201,7 +201,7 @@ app.get('/api/users/leaderboard', async (req: Request, res: Response): Promise<v
 // --- Venue Routes ---
 app.get('/api/venues', async (req: Request, res: Response): Promise<void> => {
   try {
-    const venues = await prisma.venue.findMany({ include: { courts: { include: { bookings: { where: { status: { in: ['CONFIRMED', 'PENDING'] } } } } }, reviews: true } });
+    const venues = await prisma.venue.findMany({ include: { courts: { include: { bookings: { where: { status: { in: ['CONFIRMED', 'PENDING', 'ATTENDANCE_CONFIRMED'] } } } } }, reviews: true } });
     const parsed = venues.map((v: any) => ({
       ...v,
       images: typeof v.images === 'string' ? JSON.parse(v.images) : v.images,
@@ -218,7 +218,7 @@ app.get('/api/venues/:id', async (req: Request, res: Response): Promise<void> =>
       where: { id: req.params.id },
       include: { 
         owner: { select: { name: true, phone: true } },
-        courts: { include: { bookings: { where: { status: { in: ['CONFIRMED', 'PENDING'] } } } } },
+        courts: { include: { bookings: { where: { status: { in: ['CONFIRMED', 'PENDING', 'ATTENDANCE_CONFIRMED'] } } } } },
         reviews: { include: { user: { select: { name: true, profilePic: true, level: true } } } }
       }
     });
@@ -319,7 +319,7 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Prom
     const eTime = new Date(endTime);
 
     const overlap = await prisma.booking.findFirst({
-      where: { courtId, status: 'CONFIRMED', OR: [ { startTime: { lt: eTime }, endTime: { gt: sTime } } ] }
+      where: { courtId, status: { in: ['CONFIRMED', 'PENDING', 'ATTENDANCE_CONFIRMED'] }, OR: [ { startTime: { lt: eTime }, endTime: { gt: sTime } } ] }
     });
 
     if (overlap) {
