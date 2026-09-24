@@ -375,6 +375,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               final dio = ref.read(dioProvider);
                               await dio.patch('/bookings/${booking['id']}/status', data: {'status': 'CANCELLED'});
                               ref.invalidate(myBookingsProvider);
+                              ref.invalidate(venuesProvider);
+                              if (booking['court'] != null && booking['court']['venueId'] != null) {
+                                ref.invalidate(venueDetailsProvider(booking['court']['venueId']));
+                              }
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إلغاء الحجز بنجاح')));
                             } catch (e) {
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء الإلغاء')));

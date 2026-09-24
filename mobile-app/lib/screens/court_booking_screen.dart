@@ -107,6 +107,8 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
       });
       
       ref.refresh(myBookingsProvider);
+      ref.invalidate(venuesProvider);
+      ref.invalidate(venueDetailsProvider(widget.court['venueId']));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الحجز بنجاح')));
         Navigator.pop(context);

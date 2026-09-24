@@ -372,14 +372,14 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Prom
 
 app.get('/api/bookings', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    let whereClause = {};
-    if (req.user!.role === 'OWNER') {
-      whereClause = { court: { venue: { ownerId: req.user!.userId } } };
-    } else {
-      whereClause = { userId: req.user!.userId };
-    }
+    const userId = req.user!.userId;
     const bookings = await prisma.booking.findMany({
-      where: whereClause,
+      where: {
+        OR: [
+          { userId: userId },
+          { court: { venue: { ownerId: userId } } }
+        ]
+      },
       include: { court: { include: { venue: true } }, user: { select: { name: true, phone: true } } },
       orderBy: { startTime: 'desc' }
     });

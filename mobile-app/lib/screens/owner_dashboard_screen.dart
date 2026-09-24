@@ -169,11 +169,15 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
     );
   }
 
-  Future<void> _updateBookingStatus(String id, String status) async {
+  Future<void> _updateBookingStatus(dynamic b, String status) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.patch('/bookings/$id/status', data: {'status': status});
+      await dio.patch('/bookings/${b['id']}/status', data: {'status': status});
       ref.refresh(myBookingsProvider);
+      ref.invalidate(venuesProvider);
+      if (b['court'] != null && b['court']['venueId'] != null) {
+        ref.invalidate(venueDetailsProvider(b['court']['venueId']));
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'CONFIRMED' ? 'تم تأكيد الحجز' : 'تم رفض الحجز')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
@@ -203,13 +207,13 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton(
-                              onPressed: () => _updateBookingStatus(b['id'], 'REJECTED'),
+                              onPressed: () => _updateBookingStatus(b, 'REJECTED'),
                               child: const Text('رفض', style: TextStyle(color: Colors.red)),
                             ),
                             const SizedBox(width: 8),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black),
-                              onPressed: () => _updateBookingStatus(b['id'], 'CONFIRMED'),
+                              onPressed: () => _updateBookingStatus(b, 'CONFIRMED'),
                               child: const Text('قبول الحجز', style: TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ],
@@ -219,7 +223,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton(
-                              onPressed: () => _updateBookingStatus(b['id'], 'REJECTED'),
+                              onPressed: () => _updateBookingStatus(b, 'REJECTED'),
                               child: const Text('إلغاء الحجز', style: TextStyle(color: Colors.red)),
                             ),
                           ],
@@ -343,10 +347,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
           // Tab 2: Bookings
           bookingsAsync.when(
             data: (bookings) {
-              if (bookings.isEmpty) return const Center(child: Text('لا توجد حجوزات', style: TextStyle(color: Colors.white)));
-              
-              final pending = bookings.where((b) => b['status'] == 'PENDING').toList();
-              final confirmed = bookings.where((b) => b['status'] == 'CONFIRMED').toList();
+              final ownerBookings = bookings.where((b) => b['court'] != null && b['court']['venue'] != null && b['court']['venue']['ownerId'] == user?['id']).toList();
+                if (ownerBookings.isEmpty) return const Center(child: Text('لا توجد حجوزات', style: TextStyle(color: Colors.white)));
+
+                final pending = ownerBookings.where((b) => b['status'] == 'PENDING').toList();
+                final confirmed = ownerBookings.where((b) => b['status'] == 'CONFIRMED').toList();
 
               return ListView(
                 padding: const EdgeInsets.all(16),
