@@ -315,7 +315,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (booking['startTime'] != null) {
           final st = DateTime.parse(booking['startTime']).toLocal();
           final diff = st.difference(DateTime.now()).inHours;
-          if (diff <= 2 && diff >= -1) {
+          if (diff <= 1 && diff >= -1) {
             showConfirmBtn = true;
           }
         }

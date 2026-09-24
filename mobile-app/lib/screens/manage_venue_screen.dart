@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_theme.dart';
 import '../providers/api_provider.dart';
 import 'add_court_screen.dart';
+import 'court_schedule_screen.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 class ManageVenueScreen extends ConsumerWidget {
@@ -14,7 +15,7 @@ class ManageVenueScreen extends ConsumerWidget {
     final venueDetailsAsync = ref.watch(venueDetailsProvider(venue['id']));
 
     return Scaffold(
-      appBar: AppBar(title: Text('إدارة: ')),
+      appBar: AppBar(title: Text('إدارة: ${venue['name']}')),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppTheme.neonBlue,
         foregroundColor: Colors.black,
@@ -36,14 +37,14 @@ class ManageVenueScreen extends ConsumerWidget {
                     children: [
                       Text('المعلومات الأساسية', style: TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('الموقع: '),
-                      Text('ساعات العمل:  - '),
+                      Text('الموقع: ${details['location']}'),
+                      Text('ساعات العمل: ${details['openTime']} - ${details['closeTime']}'),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              Text('الملاعب والغرف ()', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text('الملاعب والغرف (${courts.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 10),
               if (courts.isEmpty)
                 const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('لا توجد ملاعب أو غرف مضافة حتى الآن.', style: TextStyle(color: Colors.grey)))),
@@ -51,10 +52,10 @@ class ManageVenueScreen extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   title: Text(c['name'], style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                  subtitle: Text(' -  ج.م/ساعة'),
-                  trailing: const Icon(Icons.edit, color: Colors.white54),
+                  subtitle: Text('${c['category']} - ${c['pricePerHour']} ج.م/ساعة'),
+                  trailing: const Icon(Icons.calendar_month, color: AppTheme.neonBlue),
                   onTap: () {
-                    // TODO: Edit court screen if needed
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => CourtScheduleScreen(venue: details, court: c)));
                   },
                 ),
               )),

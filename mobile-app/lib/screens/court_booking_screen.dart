@@ -27,11 +27,12 @@ class CourtBookingScreen extends ConsumerStatefulWidget {
 class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedTime;
+  double _durationHours = 1.0;
   bool _isLoading = false;
 
-  List<String> _generateTimeSlots() {
+  List<Map<String, dynamic>> _generateTimeSlots() {
     final bookings = widget.court['bookings'] as List? ?? [];
-    List<String> slots = [];
+    List<Map<String, dynamic>> slots = [];
     int openHour = 10;
     int closeHour = 23;
     if (widget.venue != null) {
@@ -59,8 +60,9 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
       }
       
       if (!isBooked) {
-        slots.add('${realHour.toString().padLeft(2, '0')}:00');
-      }
+          final timeStr = DateFormat('h:00 a').format(DateTime(2023, 1, 1, realHour, 0)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
+          slots.add({'val': '${realHour.toString().padLeft(2, '0')}:00', 'label': timeStr});
+        }
     }
     return slots;
   }
@@ -199,12 +201,14 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 12, runSpacing: 12,
-                    children: slots.map((time) {
-                      final isSelected = _selectedTime == time;
+                    children: slots.map((timeMap) {
+                      final timeVal = timeMap['val'];
+                      final timeLabel = timeMap['label'];
+                      final isSelected = _selectedTime == timeVal;
                       return ChoiceChip(
-                        label: Text(time),
+                        label: Text(timeLabel),
                         selected: isSelected,
-                        onSelected: (val) => setState(() => _selectedTime = val ? time : null),
+                        onSelected: (val) => setState(() => _selectedTime = val ? timeVal : null),
                         selectedColor: AppTheme.neonOrange,
                         backgroundColor: AppTheme.surfaceDark,
                         labelStyle: TextStyle(color: isSelected ? Colors.black : Colors.white),
@@ -212,6 +216,30 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                     }).toList(),
                   ),
 
+                  const SizedBox(height: 24),
+                  const Text('مدة الحجز:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(color: AppTheme.surfaceDark, borderRadius: BorderRadius.circular(12)),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<double>(
+                        value: _durationHours,
+                        isExpanded: true,
+                        dropdownColor: AppTheme.surfaceDark,
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        items: [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0].map((val) {
+                          return DropdownMenuItem<double>(
+                            value: val,
+                            child: Text('$val ساعة'),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _durationHours = v);
+                        },
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 40),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _bookCourt,

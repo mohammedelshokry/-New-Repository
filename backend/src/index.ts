@@ -521,7 +521,7 @@ cron.schedule('*/30 * * * *', async () => {
   try {
     console.log('Running attendance reminder cron job...');
     const now = new Date();
-    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const twoHoursFromNow = new Date(now.getTime() + 1 * 60 * 60 * 1000);
     
     // Find upcoming bookings that are CONFIRMED and within the next 2 hours
     const upcomingBookings = await prisma.booking.findMany({
@@ -540,7 +540,7 @@ cron.schedule('*/30 * * * *', async () => {
         data: {
           userId: b.userId,
           title: 'تأكيد الحضور ضروري ⚠️',
-          body: `متبقي أقل من ساعتين على حجزك في ${b.court.name}! برجاء الدخول وتأكيد الحضور الآن لضمان الحجز وعدم إلغائه.`,
+          body: `متبقي أقل من ساعة على حجزك في ${b.court.name}! برجاء الدخول وتأكيد الحضور الآن لضمان الحجز وعدم إلغائه.`,
           type: 'ATTENDANCE_REMINDER'
         }
       });
@@ -549,7 +549,7 @@ cron.schedule('*/30 * * * *', async () => {
         try {
           await admin.messaging().send({ 
             token: b.user.fcmToken, 
-            notification: { title: 'تأكيد الحضور ضروري ⚠️', body: `متبقي أقل من ساعتين على حجزك في ${b.court.name}! برجاء الدخول وتأكيد الحضور الآن لضمان الحجز وعدم إلغائه.` } 
+            notification: { title: 'تأكيد الحضور ضروري ⚠️', body: `متبقي أقل من ساعة على حجزك في ${b.court.name}! برجاء الدخول وتأكيد الحضور الآن لضمان الحجز وعدم إلغائه.` } 
           });
         } catch (e) {}
       }

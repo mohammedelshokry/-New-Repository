@@ -243,6 +243,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.person, color: Colors.white),
+            tooltip: 'الملف الشخصي',
+            onPressed: () => context.push('/edit-profile'),
+          ),
+          IconButton(
             icon: const Icon(Icons.notifications, color: Colors.white),
             onPressed: () => context.push('/notifications'),
           ),
@@ -273,13 +278,15 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppTheme.surfaceDark,
-        foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddVenueScreen())),
-        icon: const Icon(Icons.add),
-        label: const Text('إضافة ملعب'),
-      ),
+      floatingActionButton: (pitchesAsync.value?.where((p) => p['ownerId'] == user?['id']).isEmpty ?? true) 
+        ? FloatingActionButton.extended(
+            backgroundColor: AppTheme.surfaceDark,
+            foregroundColor: Colors.white,
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddVenueScreen())),
+            icon: const Icon(Icons.add),
+            label: const Text('إضافة مكان'),
+          ) 
+        : null,
       body: TabBarView(
         controller: _tabController,
         children: [

@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,7 +11,8 @@ import 'package:go_router/go_router.dart';
 class AddCourtScreen extends ConsumerStatefulWidget {
   final String venueId;
   final String venueCategory;
-  const AddCourtScreen({super.key, required this.venueId, required this.venueCategory});
+  final dynamic existingCourt;
+  const AddCourtScreen({super.key, required this.venueId, required this.venueCategory, this.existingCourt});
   @override
   ConsumerState<AddCourtScreen> createState() => _AddCourtScreenState();
 }
@@ -33,6 +34,23 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
 
   List<XFile> _selectedImages = [];
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingCourt != null) {
+      _nameCtrl.text = widget.existingCourt['name'] ?? '';
+      _priceCtrl.text = widget.existingCourt['pricePerHour']?.toString() ?? '';
+      if (widget.existingCourt['amenities'] != null) {
+        try {
+                    final parsed = widget.existingCourt['amenities'] is String 
+              ? jsonDecode(widget.existingCourt['amenities']) 
+              : widget.existingCourt['amenities'];
+          _amenities.addAll(Map<String, dynamic>.from(parsed));
+        } catch(e) {}
+      }
+    }
+  }
 
   Future<void> _pickImages() async {
     final picker = ImagePicker();
