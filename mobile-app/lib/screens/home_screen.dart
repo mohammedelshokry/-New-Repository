@@ -350,24 +350,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
                         ],
                       ),
-                      trailing: showConfirmBtn
-                        ? ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonOrange, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 16)),
-                            onPressed: () async {
-                              try {
-                                final dio = ref.read(dioProvider);
-                                await dio.post('/bookings/${booking['id']}/confirm-attendance');
-                                ref.invalidate(myBookingsProvider);
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تأكيد الحضور! الدفع كاش بالملعب.')));
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ')));
-                              }
-                            },
-                            child: const Text('تأكيد حضوري'),
-                          )
-                        : (status == 'COMPLETED' || status == 'ATTENDANCE_CONFIRMED') 
-                            ? const Icon(Icons.check_circle, color: AppTheme.neonBlue, size: 30)
-                            : null,
+                      trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (booking['startTime'] != null && DateTime.parse(booking['startTime']).toLocal().isAfter(DateTime.now()) && status != 'CANCELLED' && status != 'REJECTED')
+                      IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.redAccent),
+                        tooltip: 'إلغاء الحجز',
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: AppTheme.surfaceDark,
+                              title: const Text('إلغاء الحجز', style: TextStyle(color: Colors.white)),
+                              content: const Text('هل أنت متأكد من إلغاء هذا الحجز؟', style: TextStyle(color: Colors.white70)),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('نعم، إلغاء', style: TextStyle(color: Colors.red))),
+                              ],
+                            )
+                          );
+                          if (confirm == true) {
+                            try {
+                              final dio = ref.read(dioProvider);
+                              await dio.patch('/bookings/${booking['id']}/status', data: {'status': 'CANCELLED'});
+                              ref.invalidate(myBookingsProvider);
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إلغاء الحجز بنجاح')));
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء الإلغاء')));
+                            }
+                          }
+                        },
+                      ),
+                    if (showConfirmBtn)
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonOrange, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 16)),
+                        onPressed: () async {
+                          try {
+                            final dio = ref.read(dioProvider);
+                            await dio.post('/bookings/${booking['id']}/confirm-attendance');
+                            ref.invalidate(myBookingsProvider);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تأكيد الحضور! الدفع كاش بالملعب.')));
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ')));
+                          }
+                        },
+                        child: const Text('تأكيد حضوري'),
+                      )
+                    else if (status == 'COMPLETED' || status == 'ATTENDANCE_CONFIRMED')
+                      const Icon(Icons.check_circle, color: AppTheme.neonBlue, size: 30),
+                  ],
+                ),
                     ),
                   ).animate().fade().slideX();
                 }).toList(),

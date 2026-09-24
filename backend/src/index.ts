@@ -474,6 +474,59 @@ app.get('/api/notifications', requireAuth, async (req: Request, res: Response): 
 
 
 // --- Attendance Confirmation ---
+app.patch('/api/bookings/:id/status', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const bookingId = req.params.id;
+    const { status } = req.body;
+    
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { court: { include: { venue: { include: { owner: true } } } }, user: true }
+    });
+    
+    if (!booking) {
+      res.status(404).json({ error: 'Booking not found' });
+      return;
+    }
+    
+    const updated = await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status }
+    });
+    
+    // Notifications logic
+    if (status === 'REJECTED') {
+      await prisma.notification.create({
+        data: {
+          userId: booking.userId,
+          title: 'تم رفض حجزك ❌',
+          body: `قام المالك بإلغاء حجزك في ${booking.court.name}. الوقت أصبح متاحاً الآن.`,
+          type: 'BOOKING_REJECTED'
+        }
+      });
+      if (booking.user.fcmToken) {
+        try { await admin.messaging().send({ token: booking.user.fcmToken, notification: { title: 'تم رفض حجزك ❌', body: `قام المالك بإلغاء حجزك في ${booking.court.name}.` } }); } catch (e) {}
+      }
+    } else if (status === 'CANCELLED') {
+      await prisma.notification.create({
+        data: {
+          userId: booking.court.venue.ownerId,
+          title: 'إلغاء حجز من اللاعب ❌',
+          body: `قام اللاعب ${booking.user.name} بإلغاء حجزه في ${booking.court.name}. الوقت أصبح متاحاً الآن.`,
+          type: 'BOOKING_CANCELLED'
+        }
+      });
+      if (booking.court.venue.owner.fcmToken) {
+        try { await admin.messaging().send({ token: booking.court.venue.owner.fcmToken, notification: { title: 'إلغاء حجز من اللاعب ❌', body: `قام اللاعب ${booking.user.name} بإلغاء حجزه في ${booking.court.name}.` } }); } catch (e) {}
+      }
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error(error); res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const bookingId = req.params.id;

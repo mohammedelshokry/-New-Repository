@@ -51,7 +51,7 @@ class _CourtScheduleScreenState extends ConsumerState<CourtScheduleScreen> {
         final et = DateTime.parse(b['endTime']).toLocal();
         final hourStart = DateTime(targetDate.year, targetDate.month, targetDate.day, realHour, 0);
         
-        if (st.isBefore(hourStart.add(const Duration(minutes: 30))) && et.isAfter(hourStart)) {
+        if (st.isBefore(hourStart.add(const Duration(hours: 1))) && et.isAfter(hourStart)) {
           isBooked = true;
           matchedBooking = b;
           break;

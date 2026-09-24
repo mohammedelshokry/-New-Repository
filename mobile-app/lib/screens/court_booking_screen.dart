@@ -51,9 +51,15 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
       if (slotStart.isBefore(DateTime.now())) continue;
       
       bool isBooked = false;
+      final slotEnd = slotStart.add(const Duration(hours: 1));
       for (var b in bookings) {
-        final bStart = DateTime.parse(b['startTime']).toLocal();
-        if (bStart.year == slotStart.year && bStart.month == slotStart.month && bStart.day == slotStart.day && bStart.hour == slotStart.hour) {
+        if (b['status'] == 'REJECTED' || b['status'] == 'CANCELLED') continue;
+        
+        final bSt = DateTime.parse(b['startTime']).toLocal();
+        final bEt = DateTime.parse(b['endTime']).toLocal();
+        
+        // Check for overlap
+        if (slotStart.isBefore(bEt) && slotEnd.isAfter(bSt)) {
           isBooked = true;
           break;
         }
