@@ -108,7 +108,7 @@ app.post('/api/upload', requireAuth, upload.array('images', 5), (req: Request, r
     const filePaths = files.map(file => `/uploads/${file.filename}`);
     res.json({ urls: filePaths });
   } catch (error) {
-    res.status(500).json({ error: 'Upload failed' });
+    console.error(error); res.status(500).json({ error: 'Upload failed' });
   }
 });
 
@@ -128,7 +128,7 @@ app.post('/api/auth/register', async (req: Request, res: Response): Promise<void
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
     res.json({ user, token });
   } catch (error) {
-    res.status(500).json({ error: 'Registration failed' });
+    console.error(error); res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -148,7 +148,7 @@ app.post('/api/auth/login', async (req: Request, res: Response): Promise<void> =
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
     res.json({ user, token });
   } catch (error) {
-    res.status(500).json({ error: 'Login failed' });
+    console.error(error); res.status(500).json({ error: 'Login failed' });
   }
 });
 
@@ -161,7 +161,7 @@ app.get('/api/auth/me', requireAuth, async (req: Request, res: Response): Promis
     }
     res.json(user);
   } catch (e) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -180,7 +180,7 @@ app.put('/api/users/me', requireAuth, async (req: Request, res: Response): Promi
     });
     res.json(user);
   } catch (error) {
-    res.status(500).json({ error: 'Update failed' });
+    console.error(error); res.status(500).json({ error: 'Update failed' });
   }
 });
 
@@ -194,21 +194,21 @@ app.get('/api/users/leaderboard', async (req: Request, res: Response): Promise<v
     });
     res.json(users);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
 // --- Venue Routes ---
 app.get('/api/venues', async (req: Request, res: Response): Promise<void> => {
   try {
-    const venues = await prisma.venue.findMany({ include: { courts: true, reviews: true } });
+    const venues = await prisma.venue.findMany({ include: { courts: { include: { bookings: { where: { status: { in: ['CONFIRMED', 'PENDING'] } } } } }, reviews: true } });
     const parsed = venues.map((v: any) => ({
       ...v,
       images: typeof v.images === 'string' ? JSON.parse(v.images) : v.images,
     }));
     res.json(parsed);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -218,7 +218,7 @@ app.get('/api/venues/:id', async (req: Request, res: Response): Promise<void> =>
       where: { id: req.params.id },
       include: { 
         owner: { select: { name: true, phone: true } },
-        courts: true,
+        courts: { include: { bookings: { where: { status: { in: ['CONFIRMED', 'PENDING'] } } } } },
         reviews: { include: { user: { select: { name: true, profilePic: true, level: true } } } }
       }
     });
@@ -234,7 +234,7 @@ app.get('/api/venues/:id', async (req: Request, res: Response): Promise<void> =>
     }));
     res.json(venue);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -265,7 +265,7 @@ app.post('/api/venues/:id/reviews', requireAuth, async (req: Request, res: Respo
     });
     res.status(201).json(review);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add review' });
+    console.error(error); res.status(500).json({ error: 'Failed to add review' });
   }
 });
 
@@ -306,7 +306,7 @@ app.get('/api/courts/:id', async (req: Request, res: Response): Promise<void> =>
     court.amenities = typeof court.amenities === 'string' ? JSON.parse(court.amenities) : court.amenities;
     res.json(court);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -347,7 +347,6 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Prom
         price,
         platformFee,
         ownerAmount,
-        status: 'CONFIRMED',
         isManual: isManual || false
       }
     });
@@ -367,7 +366,7 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Prom
 
     res.status(201).json(booking);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create booking' });
+    console.error(error); res.status(500).json({ error: 'Failed to create booking' });
   }
 });
 
@@ -386,7 +385,7 @@ app.get('/api/bookings', requireAuth, async (req: Request, res: Response): Promi
     });
     res.json(bookings);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -402,7 +401,7 @@ app.get('/api/match-requests', requireAuth, async (req: Request, res: Response):
     });
     res.json(matches);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -414,7 +413,7 @@ app.post('/api/match-requests', requireAuth, async (req: Request, res: Response)
     });
     res.status(201).json(match);
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    console.error(error); res.status(500).json({ error: 'Failed' });
   }
 });
 
@@ -431,16 +430,22 @@ app.get('/api/admin/stats', requireAuth, requireRole(['ADMIN']), async (req: Req
     
     res.json({ totalUsers, totalVenues, totalBookings, totalRevenue });
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
 app.get('/api/admin/users', requireAuth, requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   try {
-    const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
+    const users = await prisma.user.findMany({ 
+      orderBy: { createdAt: 'desc' },
+      include: {
+        bookings: { include: { court: { include: { venue: true } } } },
+        venues: { include: { courts: { include: { bookings: { include: { user: true } } } } } }
+      }
+    });
     res.json(users);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -449,7 +454,7 @@ app.get('/api/admin/venues', requireAuth, requireRole(['ADMIN']), async (req: Re
     const venues = await prisma.venue.findMany({ include: { owner: true }, orderBy: { createdAt: 'desc' } });
     res.json(venues);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -463,7 +468,7 @@ app.get('/api/notifications', requireAuth, async (req: Request, res: Response): 
     });
     res.json(notifs);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -498,7 +503,7 @@ app.post('/api/bookings/:id/confirm-attendance', requireAuth, async (req: Reques
 
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error(error); res.status(500).json({ error: 'Server error' });
   }
 });
 

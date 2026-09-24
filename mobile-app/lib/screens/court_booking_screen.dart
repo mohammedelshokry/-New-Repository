@@ -30,10 +30,33 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
   bool _isLoading = false;
 
   List<String> _generateTimeSlots() {
-    // simplified: ignoring venue open/close strictness for demo, but can be added
+    final bookings = widget.court['bookings'] as List? ?? [];
     List<String> slots = [];
-    for (int i = 10; i <= 23; i++) {
-      slots.add('${i.toString().padLeft(2, '0')}:00');
+    int openHour = int.tryParse(widget.court['venue']['openTime'].split(':')[0]) ?? 10;
+    int closeHour = int.tryParse(widget.court['venue']['closeTime'].split(':')[0]) ?? 23;
+    if (closeHour <= openHour) closeHour += 24; // Handle past midnight
+    
+    for (int i = openHour; i < closeHour; i++) {
+      final realHour = i % 24;
+      final isNextDay = i >= 24;
+      final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
+      final slotStart = DateTime(targetDate.year, targetDate.month, targetDate.day, realHour, 0);
+      
+      // Skip past times
+      if (slotStart.isBefore(DateTime.now())) continue;
+      
+      bool isBooked = false;
+      for (var b in bookings) {
+        final bStart = DateTime.parse(b['startTime']).toLocal();
+        if (bStart.year == slotStart.year && bStart.month == slotStart.month && bStart.day == slotStart.day && bStart.hour == slotStart.hour) {
+          isBooked = true;
+          break;
+        }
+      }
+      
+      if (!isBooked) {
+        slots.add('${realHour.toString().padLeft(2, '0')}:00');
+      }
     }
     return slots;
   }
@@ -47,7 +70,17 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
     
     try {
       final parts = _selectedTime!.split(':');
-      final start = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, int.parse(parts[0]), 0);
+      int selectedHour = int.parse(parts[0]);
+      
+      int openHour = int.tryParse(widget.court['venue']['openTime'].split(':')[0]) ?? 10;
+      int closeHour = int.tryParse(widget.court['venue']['closeTime'].split(':')[0]) ?? 23;
+      if (closeHour <= openHour) closeHour += 24;
+      
+      bool isNextDay = false;
+      if (selectedHour < openHour && closeHour > 24) isNextDay = true;
+      
+      final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
+      final start = DateTime(targetDate.year, targetDate.month, targetDate.day, selectedHour, 0);
       final end = start.add(const Duration(hours: 1));
 
       final dio = ref.read(dioProvider);
@@ -63,7 +96,7 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الحجز: ')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الحجز: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

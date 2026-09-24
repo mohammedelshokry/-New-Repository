@@ -141,8 +141,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
               final u = users[index];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: AppTheme.neonBlue.withOpacity(0.2),
-                  child: Text(u['name'][0].toUpperCase(), style: TextStyle(color: AppTheme.neonBlue)),
+                                backgroundColor: AppTheme.neonBlue.withOpacity(0.2),
+                                backgroundImage: u['profilePic'] != null ? NetworkImage(getFullUrl(u['profilePic'])) : null,
+                                child: u['profilePic'] == null ? Text(u['name'][0].toUpperCase(), style: const TextStyle(color: AppTheme.neonBlue)) : null,
                 ),
                 title: Text(u['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 subtitle: Text('${u['phone']} - ${u['role']}', style: const TextStyle(color: Colors.white70)),
@@ -168,71 +169,134 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   void _showUserDetails(BuildContext context, dynamic u) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppTheme.surfaceDark,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: AppTheme.neonBlue.withOpacity(0.2),
-                child: Text(u['name'][0].toUpperCase(), style: TextStyle(color: AppTheme.neonBlue, fontSize: 32, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 16),
-              Text(u['name'], style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(u['phone'], style: const TextStyle(color: Colors.white70, fontSize: 18)),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildUserInfoBadge('الدور', u['role'], Icons.admin_panel_settings),
-                  _buildUserInfoBadge('النقاط', '${u['points']}', Icons.stars),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          await ref.read(dioProvider).post('/admin/users/${u['id']}/toggle-ban');
-                          ref.refresh(adminUsersProvider.future);
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(u['isActive'] ? 'تم حظر المستخدم' : 'تم فك الحظر')));
-                          }
-                        } catch(e) {}
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: u['isActive'] ? Colors.red : Colors.green,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(u['isActive'] ? 'حظر المستخدم' : 'فك الحظر', style: const TextStyle(fontWeight: FontWeight.bold)),
+        return FractionallySizedBox(
+          heightFactor: 0.85,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: AppTheme.neonBlue.withOpacity(0.2),
+                  backgroundImage: u['profilePic'] != null ? NetworkImage(getFullUrl(u['profilePic'])) : null,
+                  child: u['profilePic'] == null ? Text(u['name'][0].toUpperCase(), style: const TextStyle(color: AppTheme.neonBlue, fontSize: 32, fontWeight: FontWeight.bold)) : null,
+                ),
+                const SizedBox(height: 16),
+                Text(u['name'], style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(u['phone'], style: const TextStyle(color: Colors.white70, fontSize: 18)),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildUserInfoBadge('الدور', u['role'], Icons.admin_panel_settings),
+                    _buildUserInfoBadge('النقاط', '${u['points']}', Icons.stars),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Colors.white24),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (u['role'] == 'PLAYER' && u['bookings'] != null && (u['bookings'] as List).isNotEmpty) ...[
+                          const Text('حجوزات اللاعب:', style: const TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          ...(u['bookings'] as List).map((b) {
+                            final courtName = b['court']?['name'] ?? 'ملعب';
+                            final venueName = b['court']?['venue']?['name'] ?? 'مكان';
+                            return Card(
+                              color: AppTheme.surfaceLighter,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                title: Text('$venueName - $courtName', style: const TextStyle(color: Colors.white)),
+                                subtitle: Text('السعر: ${b['price']} ج.م | الحالة: ${b['status']}', style: const TextStyle(color: Colors.white70)),
+                                trailing: Text(b['startTime'].toString().substring(0, 10), style: const TextStyle(color: AppTheme.neonOrange)),
+                              ),
+                            );
+                          }),
+                        ],
+                        if (u['role'] == 'OWNER' && u['venues'] != null && (u['venues'] as List).isNotEmpty) ...[
+                          const Text('أماكن وحجوزات المالك:', style: const TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          ...(u['venues'] as List).map((v) {
+                            int totalBookings = 0;
+                            double totalEarnings = 0.0;
+                            if (v['courts'] != null) {
+                              for (var c in v['courts']) {
+                                if (c['bookings'] != null) {
+                                  for (var b in c['bookings']) {
+                                    totalBookings++;
+                                    totalEarnings += (b['ownerAmount'] ?? 0.0);
+                                  }
+                                }
+                              }
+                            }
+                            return Card(
+                              color: AppTheme.surfaceLighter,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                title: Text(v['name'], style: const TextStyle(color: Colors.white)),
+                                subtitle: Text('إجمالي الحجوزات: $totalBookings', style: const TextStyle(color: Colors.white70)),
+                                trailing: Text('أرباح: $totalEarnings ج.م', style: const TextStyle(color: Colors.greenAccent)),
+                              ),
+                            );
+                          }),
+                        ] else if (u['role'] == 'OWNER') ...[
+                           const Text('لا توجد أماكن لهذا المالك', style: const TextStyle(color: Colors.white54)),
+                        ],
+                        if (u['role'] == 'PLAYER' && (u['bookings'] == null || (u['bookings'] as List).isEmpty))
+                           const Text('لا توجد حجوزات لهذا اللاعب', style: const TextStyle(color: Colors.white54)),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.neonBlue,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            await ref.read(dioProvider).post('/admin/users/${u['id']}/toggle-ban');
+                            ref.refresh(adminUsersProvider.future);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(u['isActive'] ? 'تم حظر المستخدم' : 'تم فك الحظر')));
+                            }
+                          } catch(e) {}
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: u['isActive'] ? Colors.red : Colors.green,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(u['isActive'] ? 'حظر المستخدم' : 'فك الحظر', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      child: const Text('إغلاق', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.neonBlue,
+                          foregroundColor: Colors.black,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('إغلاق', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
