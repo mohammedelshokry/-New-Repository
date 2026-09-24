@@ -50,7 +50,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           'images': await MultipartFile.fromFile(_selectedImage!.path),
         });
         final uploadRes = await dio.post('/upload', data: formData);
-        final images = List<String>.from(uploadRes.data['images']);
+        final images = List<String>.from(uploadRes.data['urls'] ?? uploadRes.data['images'] ?? []);
         if (images.isNotEmpty) profilePicUrl = images[0];
       }
       final payload = {'name': _nameCtrl.text, 'phone': _phoneCtrl.text};
@@ -62,7 +62,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث الملف الشخصي بنجاح')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: \$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
