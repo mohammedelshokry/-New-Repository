@@ -70,7 +70,7 @@ class VenueDetailsScreen extends ConsumerWidget {
                         children: [
                           const Icon(Icons.access_time, color: AppTheme.neonBlue, size: 20),
                           const SizedBox(width: 8),
-                          Text('مفتوح:  - ', style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                          Text('مفتوح: ${venue['openTime']} - ${venue['closeTime']}', style: const TextStyle(color: Colors.white70, fontSize: 16)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -112,7 +112,7 @@ class VenueDetailsScreen extends ConsumerWidget {
                                           const SizedBox(height: 4),
                                           Text(court['category'], style: const TextStyle(color: AppTheme.neonBlue)),
                                           const SizedBox(height: 8),
-                                          Text(' ج.م/ساعة', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold)),
+                                          Text('${court['pricePerHour']} ج.م/ساعة', style: const TextStyle(color: AppTheme.neonOrange, fontWeight: FontWeight.bold)),
                                         ],
                                       ),
                                     ),
@@ -134,7 +134,7 @@ class VenueDetailsScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0)),
-        error: (e, _) => Center(child: Text('خطأ: ')),
+        error: (e, _) => Center(child: Text('خطأ: $e')),
       ),
     );
   }

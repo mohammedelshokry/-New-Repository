@@ -33,7 +33,7 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
     // simplified: ignoring venue open/close strictness for demo, but can be added
     List<String> slots = [];
     for (int i = 10; i <= 23; i++) {
-      slots.add(':00');
+      slots.add('${i.toString().padLeft(2, '0')}:00');
     }
     return slots;
   }
@@ -105,16 +105,16 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(' ج.م/ساعة', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.neonOrange)),
+                  Text('${widget.court['pricePerHour']} ج.م/ساعة', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.neonOrange)),
                   const SizedBox(height: 16),
                   
                   const Text('مواصفات وتجهيزات:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.neonBlue)),
                   const SizedBox(height: 8),
                   if (amenities.isNotEmpty) ...[
-                    if (amenities['psConsole'] != null) Text('الجهاز: ', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    if (amenities['psRoomType'] != null) Text('النوع: ', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    if (amenities['footballSize'] != null) Text('المساحة: ', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    if (amenities['billiardsType'] != null) Text('النوع: ', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (amenities['psConsole'] != null) Text('الجهاز: ${amenities['psConsole']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (amenities['psRoomType'] != null) Text('النوع: ${amenities['psRoomType'] ?? amenities['courtType'] ?? ''}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (amenities['footballSize'] != null) Text('المساحة: ${amenities['footballSize']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    if (amenities['billiardsType'] != null) Text('النوع: ${amenities['billiardsType']}', style: const TextStyle(color: Colors.white, fontSize: 16)),
                     Text(amenities['isAirConditioned'] == true ? 'مكيف ❄️' : 'غير مكيف', style: const TextStyle(color: Colors.white, fontSize: 16)),
                     if (amenities['ballIncluded'] == true) const Text('كرة مجانية مع الحجز ⚽', style: TextStyle(color: Colors.white, fontSize: 16)),
                   ],
@@ -143,7 +143,7 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(DateFormat('E').format(date), style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: FontWeight.bold)),
-                                Text('', style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                                Text('${date.day}', style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),

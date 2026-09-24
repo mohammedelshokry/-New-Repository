@@ -862,7 +862,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(child: Text(pitch['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                    Text('${pitch['pricePerHour']} ج.م/ساعة', style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 16)),
+                                                                        Builder(builder: (context) {
+                                      final courts = pitch['courts'] as List?;
+                                      num minPrice = 0;
+                                      if (courts != null && courts.isNotEmpty) {
+                                        try {
+                                          minPrice = courts.map((c) => c['pricePerHour'] as num).reduce((a, b) => a < b ? a : b);
+                                        } catch (e) {}
+                                      }
+                                      return Text('${minPrice > 0 ? "تبدأ من $minPrice" : "?"} ج.م/ساعة', style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 16));
+                                    }),
                                   ],
                                 ),
                                 const SizedBox(height: 6),
