@@ -40,33 +40,35 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
       closeHour = int.tryParse(widget.venue['closeTime']?.split(':')[0] ?? '23') ?? 23;
     }
     if (closeHour <= openHour) closeHour += 24; // Handle past midnight
-    
+
     for (int i = openHour; i < closeHour; i++) {
-      final realHour = i % 24;
-      final isNextDay = i >= 24;
-      final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
-      final slotStart = DateTime(targetDate.year, targetDate.month, targetDate.day, realHour, 0);
-      
-      // Skip past times
-      if (slotStart.isBefore(DateTime.now())) continue;
-      
-      bool isBooked = false;
-      final slotEnd = slotStart.add(const Duration(hours: 1));
-      for (var b in bookings) {
-        if (b['status'] == 'REJECTED' || b['status'] == 'CANCELLED') continue;
-        
-        final bSt = DateTime.parse(b['startTime']).toLocal();
-        final bEt = DateTime.parse(b['endTime']).toLocal();
-        
-        // Check for overlap
-        if (slotStart.isBefore(bEt) && slotEnd.isAfter(bSt)) {
-          isBooked = true;
-          break;
+      for (int min in [0, 30]) {
+        final realHour = i % 24;
+        final isNextDay = i >= 24;
+        final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
+        final slotStart = DateTime(targetDate.year, targetDate.month, targetDate.day, realHour, min);
+
+        // Skip past times
+        if (slotStart.isBefore(DateTime.now())) continue;
+
+        bool isBooked = false;
+        final slotEnd = slotStart.add(const Duration(minutes: 30));
+        for (var b in bookings) {
+          if (b['status'] == 'REJECTED' || b['status'] == 'CANCELLED') continue;
+
+          final bSt = DateTime.parse(b['startTime']).toLocal();
+          final bEt = DateTime.parse(b['endTime']).toLocal();
+
+          // Check for overlap
+          if (slotStart.isBefore(bEt) && slotEnd.isAfter(bSt)) {
+            isBooked = true;
+            break;
+          }
         }
+
+        final timeStr = DateFormat('h:mm a').format(DateTime(2023, 1, 1, realHour, min)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
+        slots.add({'val': '${realHour.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}', 'label': timeStr, 'isBooked': isBooked, 'absMin': (i * 60) + min});
       }
-      
-      final timeStr = DateFormat('h:00 a').format(DateTime(2023, 1, 1, realHour, 0)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
-      slots.add({'val': '${realHour.toString().padLeft(2, '0')}:00', 'label': timeStr, 'isBooked': isBooked, 'absHour': i});
     }
     return slots;
   }
@@ -81,20 +83,21 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
     try {
       final parts = _selectedTime!.split(':');
       int selectedHour = int.parse(parts[0]);
-      
+      int selectedMin = int.parse(parts[1]);
+
       int openHour = 10;
-    int closeHour = 23;
-    if (widget.venue != null) {
-      openHour = int.tryParse(widget.venue['openTime']?.split(':')[0] ?? '10') ?? 10;
-      closeHour = int.tryParse(widget.venue['closeTime']?.split(':')[0] ?? '23') ?? 23;
-    }
+      int closeHour = 23;
+      if (widget.venue != null) {
+        openHour = int.tryParse(widget.venue['openTime']?.split(':')[0] ?? '10') ?? 10;
+        closeHour = int.tryParse(widget.venue['closeTime']?.split(':')[0] ?? '23') ?? 23;
+      }
       if (closeHour <= openHour) closeHour += 24;
-      
+
       bool isNextDay = false;
       if (selectedHour < openHour && closeHour > 24) isNextDay = true;
-      
+
       final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
-      final start = DateTime(targetDate.year, targetDate.month, targetDate.day, selectedHour, 0);
+      final start = DateTime(targetDate.year, targetDate.month, targetDate.day, selectedHour, selectedMin);
       final durationMinutes = (_durationHours * 60).toInt();
       final end = start.add(Duration(minutes: durationMinutes));
 
@@ -212,18 +215,18 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                       final timeVal = timeMap['val'] as String;
                       final timeLabel = timeMap['label'];
                       final isBooked = timeMap['isBooked'] == true;
-                      final absHour = timeMap['absHour'] as int;
+                      final absMin = timeMap['absMin'] as int;
                       
                       bool isSelected = false;
                       if (_selectedTime != null) {
-                        // Find the selected slot's absHour
+                        // Find the selected slot's absMin
                         final selSlot = slots.firstWhere((s) => s['val'] == _selectedTime, orElse: () => slots.first);
-                        final selAbsHour = selSlot['absHour'] as int;
+                        final selAbsMin = selSlot['absMin'] as int;
                         
-                        int selEndAbsHour = selAbsHour + _durationHours.toInt();
-                        if (_durationHours % 1 != 0) selEndAbsHour += 1;
+                        int durationMinutes = (_durationHours * 60).toInt();
+                        int selEndAbsMin = selAbsMin + durationMinutes;
                         
-                        if (absHour >= selAbsHour && absHour < selEndAbsHour) {
+                        if (absMin >= selAbsMin && absMin < selEndAbsMin) {
                           isSelected = true;
                         }
                       }

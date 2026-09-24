@@ -249,7 +249,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
             tooltip: 'الملف الشخصي',
-            onPressed: () => context.push('/edit-profile'),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
           ),
           IconButton(
             icon: const Icon(Icons.notifications, color: Colors.white),

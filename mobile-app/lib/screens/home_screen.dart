@@ -394,12 +394,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             final dio = ref.read(dioProvider);
                             await dio.post('/bookings/${booking['id']}/confirm-attendance');
                             ref.invalidate(myBookingsProvider);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تأكيد الحضور! الدفع كاش بالملعب.')));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال تأكيد وصولك للمالك بنجاح.')));
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ')));
                           }
                         },
-                        child: const Text('تأكيد حضوري'),
+                        child: const Text('تأكيد الوصول للملعب'),
                       )
                     else if (status == 'COMPLETED' || status == 'ATTENDANCE_CONFIRMED')
                       const Icon(Icons.check_circle, color: AppTheme.neonBlue, size: 30),

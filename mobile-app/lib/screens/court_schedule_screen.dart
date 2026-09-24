@@ -39,31 +39,35 @@ class _CourtScheduleScreenState extends ConsumerState<CourtScheduleScreen> {
 
     List<String> scheduleList = [];
     for (int i = openHour; i < closeHour; i++) {
-      final realHour = i % 24;
-      final isNextDay = i >= 24;
-      final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
-      
-      bool isBooked = false;
-      dynamic matchedBooking;
-      
-      for (var b in dailyBookings) {
-        final st = DateTime.parse(b['startTime']).toLocal();
-        final et = DateTime.parse(b['endTime']).toLocal();
-        final hourStart = DateTime(targetDate.year, targetDate.month, targetDate.day, realHour, 0);
+      for (int min in [0, 30]) {
+        final realHour = i % 24;
+        final isNextDay = i >= 24;
+        final targetDate = isNextDay ? _selectedDate.add(const Duration(days: 1)) : _selectedDate;
         
-        if (st.isBefore(hourStart.add(const Duration(hours: 1))) && et.isAfter(hourStart)) {
-          isBooked = true;
-          matchedBooking = b;
-          break;
+        bool isBooked = false;
+        dynamic matchedBooking;
+        
+        final slotStart = DateTime(targetDate.year, targetDate.month, targetDate.day, realHour, min);
+        final slotEnd = slotStart.add(const Duration(minutes: 30));
+        
+        for (var b in dailyBookings) {
+          final st = DateTime.parse(b['startTime']).toLocal();
+          final et = DateTime.parse(b['endTime']).toLocal();
+          
+          if (st.isBefore(slotEnd) && et.isAfter(slotStart)) {
+            isBooked = true;
+            matchedBooking = b;
+            break;
+          }
         }
-      }
-      
-      final timeStr = DateFormat('h:mm a').format(DateTime(2023, 1, 1, realHour, 0)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
-      
-      if (isBooked) {
-        scheduleList.add('$timeStr - محجوز (${matchedBooking['status']})');
-      } else {
-        scheduleList.add('$timeStr - متاح');
+        
+        final timeStr = DateFormat('h:mm a').format(DateTime(2023, 1, 1, realHour, min)).replaceAll('AM', 'ص').replaceAll('PM', 'م');
+        
+        if (isBooked) {
+          scheduleList.add('$timeStr - محجوز (${matchedBooking['status']})');
+        } else {
+          scheduleList.add('$timeStr - متاح');
+        }
       }
     }
 
