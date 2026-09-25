@@ -7,7 +7,6 @@ import 'package:latlong2/latlong.dart';
 import '../providers/api_provider.dart';
 import '../core/theme/app_theme.dart';
 import 'location_picker_screen.dart';
-import 'package:go_router/go_router.dart';
 import 'add_court_screen.dart';
 
 class AddVenueScreen extends ConsumerStatefulWidget {
@@ -23,9 +22,8 @@ class _AddVenueScreenState extends ConsumerState<AddVenueScreen> {
   String _selectedCategory = '\u0643\u0631\u0629 \u0642\u062f\u0645';
   final List<String> _categories = [
     '\u0643\u0631\u0629 \u0642\u062f\u0645', '\u0628\u0627\u062f\u0644', '\u062a\u0646\u0633', '\u0643\u0631\u0629 \u0633\u0644\u0629', 
-    '\u0628\u0644\u0627\u064a\u0633\u062a\u064a\u0634\u0646', '\u0628\u0644\u064a\u0627\u0631\u062f\u0648', '\u0643\u0631\u0629 \u0637\u0627\u0626\u0631\u0629'
+    '\u0628\u0644\u0627\u064a\u0633\u062a\u064a\u0634\u0646', '\u0628\u0644\u064a\u0627\u0631\u062f\u0648', '\u0643\u0631\u0629 \u0637\u0627\u0626\u0631\u0629', 'بينج بونج'
   ];
-
   TimeOfDay _openTime = const TimeOfDay(hour: 14, minute: 0);
   TimeOfDay _closeTime = const TimeOfDay(hour: 2, minute: 0);
   

@@ -35,11 +35,22 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
   List<XFile> _selectedImages = [];
   List<String> _networkImages = [];
   bool _isLoading = false;
+  late String _roomCategory;
+  
+  final List<String> _categories = [
+    'كرة قدم', 'بادل', 'تنس', 'كرة سلة', 
+    'بلايستيشن', 'بلياردو', 'كرة طائرة', 'بينج بونج'
+  ];
+
 
   @override
   void initState() {
     super.initState();
+    _roomCategory = widget.venueCategory;
     if (widget.existingCourt != null) {
+      if (_categories.contains(widget.existingCourt['category'])) {
+        _roomCategory = widget.existingCourt['category'];
+      }
       _nameCtrl.text = widget.existingCourt['name'] ?? '';
       _priceCtrl.text = widget.existingCourt['pricePerHour']?.toString() ?? '';
       if (widget.existingCourt['images'] != null) {
@@ -95,22 +106,22 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
       final Map<String, dynamic> filteredAmenities = {};
       filteredAmenities['isAirConditioned'] = _amenities['isAirConditioned'];
       
-      if (widget.venueCategory == 'بادل') {
+      if (_roomCategory == 'بادل') {
         filteredAmenities['courtType'] = _amenities['courtType'];
         filteredAmenities['ballIncluded'] = _amenities['ballIncluded'];
-      } else if (widget.venueCategory == 'بلايستيشن') {
+      } else if (_roomCategory == 'بلايستيشن') {
         filteredAmenities['psConsole'] = _amenities['psConsole'];
         filteredAmenities['psRoomType'] = _amenities['psRoomType'];
-      } else if (widget.venueCategory == 'بلياردو') {
+      } else if (_roomCategory == 'بلياردو') {
         filteredAmenities['billiardsType'] = _amenities['billiardsType'];
-      } else if (widget.venueCategory == 'كرة قدم') {
+      } else if (_roomCategory == 'كرة قدم') {
         filteredAmenities['footballSize'] = _amenities['footballSize'];
         filteredAmenities['ballIncluded'] = _amenities['ballIncluded'];
       }
 
       final payload = {
         'name': _nameCtrl.text,
-        'category': widget.venueCategory, // Sub-room inherits the venue's category
+        'category': _roomCategory,
         'description': _descCtrl.text,
         'pricePerHour': double.tryParse(_priceCtrl.text) ?? 100,
         'images': [..._networkImages, ...uploadedImageUrls],
@@ -175,6 +186,15 @@ class _AddCourtScreenState extends ConsumerState<AddCourtScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+
+            DropdownButtonFormField<String>(
+              value: _roomCategory,
+              dropdownColor: AppTheme.surfaceDark, style: const TextStyle(color: Colors.white),
+              items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              onChanged: (v) => setState(() => _roomCategory = v!),
+              decoration: InputDecoration(labelText: 'نوع الغرفة/الملعب', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _nameCtrl, style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(labelText: 'اسم/رقم الغرفة أو الملعب (مثال: غرفة 1, VIP, ملعب خماسي A)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),

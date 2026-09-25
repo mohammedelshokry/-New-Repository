@@ -27,10 +27,9 @@ class _EditVenueScreenState extends ConsumerState<EditVenueScreen> {
   bool _isLoading = false;
 
   final List<String> _categories = [
-    'كرة قدم', 'بادل', 'تنس', 'كرة سلة',
-    'بلايستيشن', 'بلياردو', 'كرة طائرة'
+    '\u0643\u0631\u0629 \u0642\u062f\u0645', '\u0628\u0627\u062f\u0644', '\u062a\u0646\u0633', '\u0643\u0631\u0629 \u0633\u0644\u0629', 
+    '\u0628\u0644\u0627\u064a\u0633\u062a\u064a\u0634\u0646', '\u0628\u0644\u064a\u0627\u0631\u062f\u0648', '\u0643\u0631\u0629 \u0637\u0627\u0626\u0631\u0629', 'بينج بونج'
   ];
-
   TimeOfDay _parseTime(String? time) {
     if (time == null || !time.contains(':')) return const TimeOfDay(hour: 14, minute: 0);
     final parts = time.split(':');

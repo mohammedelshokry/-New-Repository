@@ -264,7 +264,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                         onPressed: () async {
                           try {
                             await ref.read(dioProvider).post('/admin/users/${u['id']}/toggle-ban');
-                            ref.refresh(adminUsersProvider.future);
+                            ref.invalidate(adminUsersProvider);
                             if (context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(u['isActive'] ? 'تم حظر المستخدم' : 'تم فك الحظر')));
@@ -371,7 +371,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                     if (confirm == true) {
                       try {
                         await ref.read(dioProvider).delete('/admin/pitches/${p['id']}');
-                        ref.refresh(adminVenuesProvider.future);
+                        ref.invalidate(adminVenuesProvider);
                         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حذف الملعب')));
                       } catch(e) {}
                     }
