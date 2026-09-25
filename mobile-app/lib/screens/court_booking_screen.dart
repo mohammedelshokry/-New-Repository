@@ -108,7 +108,7 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
         'endTime': end.toIso8601String(),
       });
       
-      ref.refresh(myBookingsProvider);
+      ref.invalidate(myBookingsProvider);
       ref.invalidate(venuesProvider);
       ref.invalidate(venueDetailsProvider(widget.court['venueId']));
       if (mounted) {
@@ -250,8 +250,8 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
                           });
                         },
                         selectedColor: AppTheme.neonOrange,
-                        backgroundColor: isBooked ? Colors.grey.withOpacity(0.3) : AppTheme.surfaceDark,
-                        disabledColor: Colors.red.withOpacity(0.2),
+                        backgroundColor: isBooked ? Colors.grey.withValues(alpha: 0.3) : AppTheme.surfaceDark,
+                        disabledColor: Colors.red.withValues(alpha: 0.2),
                       );
                     }).toList(),
                   ),

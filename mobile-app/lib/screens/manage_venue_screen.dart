@@ -5,6 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../providers/api_provider.dart';
 import 'add_court_screen.dart';
 import 'court_schedule_screen.dart';
+import 'edit_venue_screen.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 class ManageVenueScreen extends ConsumerWidget {
@@ -48,10 +49,44 @@ class ManageVenueScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('المعلومات الأساسية', style: TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: Text('المعلومات الأساسية', style: TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold))),
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: AppTheme.neonOrange),
+                            tooltip: 'تعديل المكان',
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => EditVenueScreen(venue: details)),
+                            ).then((_) => ref.invalidate(venueDetailsProvider(venue['id']))),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Text('الموقع: ${details['location']}'),
                       Text('ساعات العمل: ${formatTime(details['openTime'])} - ${formatTime(details['closeTime'])}'),
+                      if (details['images'] != null && (details['images'] as List).isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 90,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: (details['images'] as List).length,
+                            itemBuilder: (ctx, i) {
+                              final img = (details['images'] as List)[i].toString();
+                              final url = img.startsWith('http') ? img : 'http://192.168.1.10:3001$img';
+                              return Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                width: 90,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

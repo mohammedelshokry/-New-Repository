@@ -78,7 +78,7 @@ class _AddVenueScreenState extends ConsumerState<AddVenueScreen> {
       };
 
       final response = await dio.post('/venues', data: payload);
-      ref.refresh(venuesProvider);
+      var _ = ref.refresh(venuesProvider);
       
       if (mounted) {
         // Now navigate to AddCourtScreen to add the first room/pitch!

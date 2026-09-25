@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import 'map_screen.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,13 +59,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
       }
     } catch (e) {
-      print('FCM Setup error: $e');
+      debugPrint('FCM Setup error: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -156,9 +154,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   final user = users[index];
                   final isTop3 = index < 3;
                   Color rankColor = Colors.grey;
-                  if (index == 0) rankColor = const Color(0xFFFFD700); // Gold
-                  else if (index == 1) rankColor = const Color(0xFFC0C0C0); // Silver
-                  else if (index == 2) rankColor = const Color(0xFFCD7F32); // Bronze
+                  if (index == 0) { rankColor = const Color(0xFFFFD700); } // Gold
+                  else if (index == 1) { rankColor = const Color(0xFFC0C0C0); } // Silver
+                  else if (index == 2) { rankColor = const Color(0xFFCD7F32); } // Bronze
                   
                   return Card(
                     clipBehavior: Clip.antiAlias,
@@ -197,10 +195,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (user == null) return const Center(child: SpinKitPulse(color: AppTheme.neonBlue, size: 50.0));
 
     Color badgeColor = Colors.grey;
-    if (user['level'] == 'DIAMOND') badgeColor = const Color(0xFFE0F7FA);
-    else if (user['level'] == 'GOLD') badgeColor = const Color(0xFFFFD700);
-    else if (user['level'] == 'SILVER') badgeColor = const Color(0xFFC0C0C0);
-    else if (user['level'] == 'BRONZE') badgeColor = const Color(0xFFCD7F32);
+    if (user['level'] == 'DIAMOND') { badgeColor = const Color(0xFFE0F7FA); }
+    else if (user['level'] == 'GOLD') { badgeColor = const Color(0xFFFFD700); }
+    else if (user['level'] == 'SILVER') { badgeColor = const Color(0xFFC0C0C0); }
+    else if (user['level'] == 'BRONZE') { badgeColor = const Color(0xFFCD7F32); }
     
     int points = user['points'] ?? 0;
     int nextLevelPoints = 500;
@@ -296,31 +294,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               final recentBookings = bookings.take(3).toList();
               return Column(
                 children: recentBookings.map((booking) {
-                  final pitch = booking['pitch'] ?? {};
-                  final isUnpaid = booking['paymentStatus'] == 'UNPAID';
+                  final pitch = booking['court'] ?? {};
                   final status = booking['status'];
 
                   Color statusColor = AppTheme.neonBlue; // COMPLETED / PAID
                   String statusText = 'مكتمل';
-                  bool showConfirmBtn = false;
+
 
                   if (status == 'REJECTED') {
                     statusColor = Colors.red;
                     statusText = 'مرفوض من المالك';
+                  } else if (status == 'CANCELLED') {
+                    statusColor = Colors.redAccent;
+                    statusText = 'تم إلغاء الحجز';
                   } else if (status == 'PENDING') {
                     statusColor = Colors.amber;
                     statusText = 'بانتظار قبول المالك';
                   } else if (status == 'CONFIRMED') {
-        statusColor = AppTheme.neonOrange;
-        statusText = 'تم القبول (بانتظار حضورك)';
-        if (booking['startTime'] != null) {
-          final st = DateTime.parse(booking['startTime']).toLocal();
-          final diff = st.difference(DateTime.now()).inHours;
-          if (diff <= 1 && diff >= -1) {
-            showConfirmBtn = true;
-          }
-        }
-      } else if (status == 'ATTENDANCE_CONFIRMED') {
+                    statusColor = AppTheme.neonOrange;
+                    statusText = 'تم الحجز';
+                  } else if (status == 'ATTENDANCE_CONFIRMED') {
                     statusColor = Colors.greenAccent;
                     statusText = 'تم تأكيد الحضور (الدفع كاش)';
                   }
@@ -380,29 +373,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               if (booking['court'] != null && booking['court']['venueId'] != null) {
                                 ref.invalidate(venueDetailsProvider(booking['court']['venueId']));
                               }
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إلغاء الحجز بنجاح')));
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إلغاء الحجز بنجاح')));
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء الإلغاء')));
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء الإلغاء')));
                             }
                           }
                         },
                       ),
-                    if (showConfirmBtn)
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonOrange, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 16)),
-                        onPressed: () async {
-                          try {
-                            final dio = ref.read(dioProvider);
-                            await dio.post('/bookings/${booking['id']}/confirm-attendance');
-                            ref.invalidate(myBookingsProvider);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال تأكيد وصولك للمالك بنجاح.')));
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ')));
-                          }
-                        },
-                        child: const Text('تأكيد الوصول للملعب'),
-                      )
-                    else if (status == 'COMPLETED' || status == 'ATTENDANCE_CONFIRMED')
+                    if (status == 'COMPLETED' || status == 'ATTENDANCE_CONFIRMED')
                       const Icon(Icons.check_circle, color: AppTheme.neonBlue, size: 30),
                   ],
                 ),
@@ -455,72 +433,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-
-  void _showEditProfileSheet(BuildContext context, Map<String, dynamic> user) {
-    final nameCtrl = TextEditingController(text: user['name']);
-    final phoneCtrl = TextEditingController(text: user['phone']);
-    bool isLoading = false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.surfaceLighter,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('تعديل الملف الشخصي', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: nameCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(labelText: 'الاسم', labelStyle: const TextStyle(color: Colors.white70), filled: true, fillColor: AppTheme.backgroundDark, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(labelText: 'رقم الهاتف', hintText: '01XXXXXXXXX', hintStyle: const TextStyle(color: Colors.white38), labelStyle: const TextStyle(color: Colors.white70), filled: true, fillColor: AppTheme.backgroundDark, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  onPressed: isLoading ? null : () async {
-                    setModalState(() => isLoading = true);
-                    try {
-                      final dio = ref.read(dioProvider);
-                      final res = await dio.put('/users/me', data: {
-                        'name': nameCtrl.text,
-                        'phone': phoneCtrl.text,
-                      });
-                      ref.read(currentUserProvider.notifier).state = res.data;
-                      if (context.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التعديلات بنجاح!')));
-                      }
-                    } catch (e) {
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء التحديث: $e')));
-                    } finally {
-                      setModalState(() => isLoading = false);
-                    }
-                  },
-                  child: isLoading 
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                      : const Text('حفظ التغييرات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-          );
-        }
-      ),
-    );
-  }
 
   void _showPaymentMethodsSheet(BuildContext context) {
     showModalBottomSheet(
@@ -755,7 +667,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 💰 التكلفة: ${match['costPerSpot'] ?? '?'} ج.م
 
 حمّل التطبيق الآن وانضم إلينا!''';
-                                    Share.share(text);
+                                    SharePlus.instance.share(ShareParams(text: text));
                                   },
                                 ),
                               )
@@ -912,7 +824,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       if (courts != null && courts.isNotEmpty) {
                                         try {
                                           minPrice = courts.map((c) => c['pricePerHour'] as num).reduce((a, b) => a < b ? a : b);
-                                        } catch (e) {}
+                                        } catch (_) { /* ignore price parsing errors */ }
                                       }
                                       return Text('${minPrice > 0 ? "تبدأ من $minPrice" : "?"} ج.م/ساعة', style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 16));
                                     }),

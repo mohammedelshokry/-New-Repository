@@ -107,7 +107,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: color.withOpacity(0.2), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.2), shape: BoxShape.circle),
               child: Icon(icon, color: color, size: 32),
             ),
             const SizedBox(width: 20),
@@ -141,7 +141,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
               final u = users[index];
               return ListTile(
                 leading: CircleAvatar(
-                                backgroundColor: AppTheme.neonBlue.withOpacity(0.2),
+                                backgroundColor: AppTheme.neonBlue.withValues(alpha: 0.2),
                                 backgroundImage: u['profilePic'] != null ? NetworkImage(getFullUrl(u['profilePic'])) : null,
                                 child: u['profilePic'] == null ? Text(u['name'][0].toUpperCase(), style: const TextStyle(color: AppTheme.neonBlue)) : null,
                 ),
@@ -181,7 +181,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundColor: AppTheme.neonBlue.withOpacity(0.2),
+                  backgroundColor: AppTheme.neonBlue.withValues(alpha: 0.2),
                   backgroundImage: u['profilePic'] != null ? NetworkImage(getFullUrl(u['profilePic'])) : null,
                   child: u['profilePic'] == null ? Text(u['name'][0].toUpperCase(), style: const TextStyle(color: AppTheme.neonBlue, fontSize: 32, fontWeight: FontWeight.bold)) : null,
                 ),
@@ -331,7 +331,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                 if (p['images'] != null && p['images'].toString().isNotEmpty) {
                   images = List<String>.from(jsonDecode(p['images']));
                 }
-              } catch (e) {}
+              } catch (_) { /* ignore */ }
               
               return ListTile(
                 leading: Container(

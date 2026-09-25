@@ -119,7 +119,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       decoration: BoxDecoration(
         color: AppTheme.surfaceDark,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -130,9 +130,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: !isOwner ? AppTheme.neonBlue.withOpacity(0.15) : Colors.transparent,
+                  color: !isOwner ? AppTheme.neonBlue.withValues(alpha: 0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: !isOwner ? AppTheme.neonBlue.withOpacity(0.5) : Colors.transparent),
+                  border: Border.all(color: !isOwner ? AppTheme.neonBlue.withValues(alpha: 0.5) : Colors.transparent),
                 ),
                 child: Center(
                   child: Text('لاعب', style: TextStyle(
@@ -150,9 +150,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: isOwner ? AppTheme.neonOrange.withOpacity(0.15) : Colors.transparent,
+                  color: isOwner ? AppTheme.neonOrange.withValues(alpha: 0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isOwner ? AppTheme.neonOrange.withOpacity(0.5) : Colors.transparent),
+                  border: Border.all(color: isOwner ? AppTheme.neonOrange.withValues(alpha: 0.5) : Colors.transparent),
                 ),
                 child: Center(
                   child: Text('مالك ملعب', style: TextStyle(
@@ -210,7 +210,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 Text(
                   isLogin ? 'مرحباً بعودتك إلى SPOTAIA!' : 'انضم إلى مجتمع الرياضة الأكبر',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.6)),
+                  style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 40),
 
@@ -220,7 +220,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceDark, 
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                   ),
                   child: Row(
                     children: [
@@ -312,9 +312,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     margin: const EdgeInsets.only(bottom: 24),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.error.withOpacity(0.1), 
+                      color: AppTheme.error.withValues(alpha: 0.1), 
                       borderRadius: BorderRadius.circular(12), 
-                      border: Border.all(color: AppTheme.error.withOpacity(0.3))
+                      border: Border.all(color: AppTheme.error.withValues(alpha: 0.3))
                     ),
                     child: Row(
                       children: [

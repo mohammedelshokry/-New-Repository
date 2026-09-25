@@ -4,7 +4,7 @@ import '../providers/api_provider.dart';
 import 'package:intl/intl.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+  const NotificationsScreen({super.key});
 
   @override
   ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();

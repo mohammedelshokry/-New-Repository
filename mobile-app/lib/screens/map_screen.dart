@@ -68,7 +68,7 @@ class MapScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.neonBlue.withOpacity(0.5),
+                                  color: AppTheme.neonBlue.withValues(alpha: 0.5),
                                   blurRadius: 8,
                                 )
                               ],

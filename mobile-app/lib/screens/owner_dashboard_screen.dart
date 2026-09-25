@@ -2,9 +2,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:dio/dio.dart';
-import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
@@ -68,7 +65,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
     try {
       final dio = ref.read(dioProvider);
       await dio.patch('/bookings/${b['id']}/status', data: {'status': status});
-      ref.refresh(myBookingsProvider);
+      ref.invalidate(myBookingsProvider);
       ref.invalidate(venuesProvider);
       if (b['court'] != null && b['court']['venueId'] != null) {
         ref.invalidate(venueDetailsProvider(b['court']['venueId']));

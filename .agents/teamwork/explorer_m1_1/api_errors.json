@@ -1,0 +1,13 @@
+[
+  "[Line 148:14] Type 'string | string[]' is not assignable to type 'string'.\n  Type 'string[]' is not assignable to type 'string'.",
+  "[Line 156:32] Property 'pitch' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.",
+  "[Line 163:32] Property 'pitch' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.",
+  "[Line 180:30] Property 'pitch' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.",
+  "[Line 186:32] Property 'pitch' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.",
+  "[Line 202:32] Property 'pitch' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.",
+  "[Line 211:9] Object literal may only specify known properties, and 'pitchId' does not exist in type 'BookingWhereInput'.",
+  "[Line 232:9] Object literal may only specify known properties, and 'pitchId' does not exist in type '(Without<BookingCreateInput, BookingUncheckedCreateInput> & BookingUncheckedCreateInput) | (Without<...> & BookingCreateInput)'.",
+  "[Line 250:16] Object literal may only specify known properties, and 'pitch' does not exist in type 'BookingInclude<DefaultArgs>'.",
+  "[Line 257:14] Object literal may only specify known properties, and 'pitch' does not exist in type 'BookingWhereInput'.",
+  "[Line 258:16] Object literal may only specify known properties, and 'pitch' does not exist in type 'BookingInclude<DefaultArgs>'."
+]
