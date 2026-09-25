@@ -363,7 +363,7 @@ app.post('/api/bookings', requireAuth, async (req: Request, res: Response): Prom
     });
 
     if (overlap) {
-      res.status(400).json({ error: 'Time slot already booked' });
+      res.status(400).json({ error: 'هذا الموعد محجوز مسبقاً' });
       return;
     }
 

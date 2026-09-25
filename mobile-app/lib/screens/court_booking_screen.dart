@@ -116,7 +116,13 @@ class _CourtBookingScreenState extends ConsumerState<CourtBookingScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الحجز: $e')));
+      String errorMsg = 'حدث خطأ غير معروف';
+      if (e is DioException && e.response?.data != null && e.response?.data['error'] != null) {
+        errorMsg = e.response!.data['error'];
+      } else {
+        errorMsg = e.toString();
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الحجز: $errorMsg')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -5,9 +5,6 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'dart:typed_data';
-import 'package:image_picker/image_picker.dart';
-import 'package:dio/dio.dart';
-import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
@@ -46,110 +43,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
     super.dispose();
   }
 
-  void _showAddPitchDialog() {
-    final nameCtrl = TextEditingController();
-    final locCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    final mapCtrl = TextEditingController();
-    TimeOfDay openTime = const TimeOfDay(hour: 14, minute: 0);
-    TimeOfDay closeTime = const TimeOfDay(hour: 2, minute: 0);
-    
-    String surface = 'Artificial Grass';
-    String category = 'Football';
-    bool indoor = false;
-    XFile? selectedImage;
-    Uint8List? imageBytes;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20, right: 20, top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'إضافة ملعب جديد',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'اسم الملعب',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.stadium),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: locCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'الموقع (مثال: المعادي، القاهرة)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: priceCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'السعر في الساعة (جنيه)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () async {
-                    try {
-                      final dio = ref.read(dioProvider);
-                      await dio.post('/pitches', data: {
-                        'name': nameCtrl.text,
-                        'location': locCtrl.text,
-                        'pricePerHour': double.tryParse(priceCtrl.text) ?? 200,
-                        'category': category,
-                        'surface': surface,
-                        'indoor': indoor,
-                        'openTime': '${openTime.hour.toString().padLeft(2,'0')}:${openTime.minute.toString().padLeft(2,'0')}',
-                        'closeTime': '${closeTime.hour.toString().padLeft(2,'0')}:${closeTime.minute.toString().padLeft(2,'0')}',
-                        'images': 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&q=80&w=800',
-                        'description': descCtrl.text,
-                        'googleMapsLink': mapCtrl.text,
-                        'amenities': 'كرة، حمامات، كشافات'
-                      });
-                      ref.refresh(venuesProvider);
-                      if (mounted) Navigator.pop(ctx);
-                    } catch (e) {
-                      if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('خطأ: $e')));
-                    }
-                  },
-                  child: const Text('إضافة الملعب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
+  
   Widget _statCard(String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -179,9 +73,9 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> wit
       if (b['court'] != null && b['court']['venueId'] != null) {
         ref.invalidate(venueDetailsProvider(b['court']['venueId']));
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'CONFIRMED' ? 'تم تأكيد الحجز' : 'تم رفض الحجز')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'CONFIRMED' ? 'تم تأكيد الحجز' : 'تم رفض الحجز')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
     }
   }
 

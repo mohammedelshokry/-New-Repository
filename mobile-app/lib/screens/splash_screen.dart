@@ -29,18 +29,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!mounted) return;
 
     if (!hasSeenOnboarding) {
-      context.go('/onboarding');
+      if (mounted) context.go('/onboarding');
     } else if (token != null && token.isNotEmpty) {
       try {
         final dio = ref.read(dioProvider);
         final res = await dio.get('/auth/me');
         ref.read(currentUserProvider.notifier).state = res.data;
-        context.go('/home');
+        if (mounted) context.go('/home');
       } catch (e) {
-        context.go('/auth');
+        if (mounted) context.go('/auth');
       }
     } else {
-      context.go('/auth');
+      if (mounted) context.go('/auth');
     }
   }
 

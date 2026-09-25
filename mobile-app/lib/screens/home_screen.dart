@@ -578,13 +578,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               title: const Text('الإشعارات', style: TextStyle(color: Colors.white)),
               subtitle: const Text('تفعيل تنبيهات المباريات والحجوزات', style: TextStyle(color: Colors.white54)),
               value: true,
-              activeColor: AppTheme.neonBlue,
+              activeThumbColor: AppTheme.neonBlue,
               onChanged: (v) {},
             ),
             SwitchListTile(
               title: const Text('الوضع المظلم', style: TextStyle(color: Colors.white)),
               value: true,
-              activeColor: AppTheme.neonBlue,
+              activeThumbColor: AppTheme.neonBlue,
               onChanged: (v) {},
             ),
             ListTile(
@@ -667,10 +667,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             
             // Gamification badge color logic
             Color badgeColor = Colors.grey;
-            if (creator['level'] == 'DIAMOND') badgeColor = const Color(0xFFE0F7FA);
-            else if (creator['level'] == 'GOLD') badgeColor = const Color(0xFFFFD700);
-            else if (creator['level'] == 'SILVER') badgeColor = const Color(0xFFC0C0C0);
-            else if (creator['level'] == 'BRONZE') badgeColor = const Color(0xFFCD7F32);
+            if (creator['level'] == 'DIAMOND') { badgeColor = const Color(0xFFE0F7FA); }
+            else if (creator['level'] == 'GOLD') { badgeColor = const Color(0xFFFFD700); }
+            else if (creator['level'] == 'SILVER') { badgeColor = const Color(0xFFC0C0C0); }
+            else if (creator['level'] == 'BRONZE') { badgeColor = const Color(0xFFCD7F32); }
 
             return Card(
                     clipBehavior: Clip.antiAlias,

@@ -88,7 +88,7 @@ class VenueDetailsScreen extends ConsumerWidget {
                           if (await canLaunchUrl(url)) {
                             await launchUrl(url, mode: LaunchMode.externalApplication);
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن فتح الخريطة')));
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن فتح الخريطة')));
                           }
                         },
                         child: Row(
